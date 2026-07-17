@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/((?!apps/|assets/|presupuestos\\.html|.*\\..*).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
