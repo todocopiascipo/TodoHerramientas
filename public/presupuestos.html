@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora de Presupuestos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --brand-a: #1e61a8;
+      --brand-b: #312783;
+      --bg: #f6f8fb;
+      --surface: #ffffff;
+      --surface-soft: #eef3f8;
+      --text: #172033;
+      --muted: #6f7a8d;
+      --line: #dde5ef;
+      --success: #16a085;
+      --shadow: 0 18px 55px rgba(35, 47, 78, 0.12);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--text);
+      font-family: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        linear-gradient(180deg, rgba(30, 97, 168, 0.08), rgba(49, 39, 131, 0) 360px),
+        var(--bg);
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    .app-shell {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 48px;
+      height: 48px;
+      flex: 0 0 auto;
+      place-items: center;
+      border-radius: var(--radius);
+      color: #ffffff;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--brand-a), var(--brand-b));
+      box-shadow: 0 10px 24px rgba(30, 97, 168, 0.25);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(1.35rem, 3vw, 2.05rem);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .brand p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 0 14px;
+      border: 1px solid rgba(30, 97, 168, 0.16);
+      border-radius: 999px;
+      color: var(--brand-a);
+      background: rgba(255, 255, 255, 0.72);
+      font-size: 0.88rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 0 5px rgba(22, 160, 133, 0.12);
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 18px;
+      padding: 6px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.86);
+      box-shadow: 0 12px 34px rgba(35, 47, 78, 0.08);
+    }
+
+    .tab-button {
+      min-height: 50px;
+      border: 0;
+      border-radius: var(--radius);
+      cursor: pointer;
+      color: #405067;
+      background: transparent;
+      font-size: 0.96rem;
+      font-weight: 800;
+      transition: color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+    }
+
+    .tab-button:hover {
+      color: var(--brand-a);
+      background: rgba(30, 97, 168, 0.07);
+      transform: translateY(-1px);
+    }
+
+    .tab-button.active {
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--brand-a), var(--brand-b));
+      box-shadow: 0 12px 24px rgba(49, 39, 131, 0.2);
+    }
+
+    .tab-panel {
+      display: none;
+      animation: fadeSlide 220ms ease both;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeSlide {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.03fr) minmax(360px, 0.78fr);
+      gap: 22px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: var(--shadow);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 20px 22px 0;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 800;
+    }
+
+    .panel-badge {
+      padding: 7px 10px;
+      border-radius: 999px;
+      color: var(--brand-b);
+      background: rgba(49, 39, 131, 0.08);
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      padding: 20px 22px 22px;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    .discount-card {
+      display: grid;
+      grid-column: 1 / -1;
+      gap: 14px;
+      padding: 16px;
+      border: 1px solid rgba(30, 97, 168, 0.14);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(30, 97, 168, 0.06), rgba(49, 39, 131, 0.03));
+    }
+
+    .discount-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: #344154;
+      font-size: 0.89rem;
+      font-weight: 800;
+    }
+
+    .discount-note {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .discount-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .binding-module {
+      display: grid;
+      grid-column: 1 / -1;
+      gap: 14px;
+      padding: 16px;
+      border: 1px solid rgba(49, 39, 131, 0.14);
+      border-radius: var(--radius);
+      background: #fbfcff;
+    }
+
+    .module-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .module-title {
+      margin: 0;
+      color: #344154;
+      font-size: 0.95rem;
+      font-weight: 800;
+    }
+
+    .module-hint {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .btn-add {
+      min-height: 42px;
+      padding: 0 13px;
+      color: var(--brand-a);
+      background: rgba(30, 97, 168, 0.08);
+      white-space: nowrap;
+    }
+
+    .btn-add:hover {
+      background: rgba(30, 97, 168, 0.13);
+    }
+
+    .binding-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .binding-empty {
+      margin: 0;
+      padding: 14px;
+      border: 1px dashed rgba(30, 97, 168, 0.28);
+      border-radius: var(--radius);
+      color: var(--muted);
+      background: rgba(30, 97, 168, 0.04);
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .binding-row {
+      display: grid;
+      grid-template-columns: minmax(150px, 1.3fr) minmax(86px, 0.6fr) minmax(92px, 0.7fr) minmax(100px, 0.8fr) 42px;
+      gap: 10px;
+      align-items: end;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: 0 8px 22px rgba(35, 47, 78, 0.06);
+    }
+
+    .readonly-value {
+      display: flex;
+      align-items: center;
+      min-height: 54px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      color: #344154;
+      background: var(--surface-soft);
+      font-weight: 800;
+    }
+
+    .btn-delete {
+      width: 42px;
+      min-height: 42px;
+      padding: 0;
+      color: #8a2330;
+      background: rgba(180, 35, 24, 0.08);
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+
+    .btn-delete:hover {
+      background: rgba(180, 35, 24, 0.14);
+    }
+
+    label {
+      color: #344154;
+      font-size: 0.89rem;
+      font-weight: 800;
+    }
+
+    input,
+    select {
+      width: 100%;
+      min-height: 54px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      outline: 0;
+      color: var(--text);
+      background: var(--surface);
+      font-size: 1rem;
+      font-weight: 700;
+      transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+    }
+
+    select {
+      appearance: none;
+      background-image:
+        linear-gradient(45deg, transparent 50%, var(--brand-a) 50%),
+        linear-gradient(135deg, var(--brand-a) 50%, transparent 50%);
+      background-position:
+        calc(100% - 20px) 23px,
+        calc(100% - 14px) 23px;
+      background-size: 6px 6px, 6px 6px;
+      background-repeat: no-repeat;
+      padding-right: 42px;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: rgba(30, 97, 168, 0.72);
+      box-shadow: 0 0 0 4px rgba(30, 97, 168, 0.13);
+      transform: translateY(-1px);
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 0.8fr;
+      gap: 12px;
+      padding: 0 22px 22px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 54px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 0.96rem;
+      font-weight: 800;
+      transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease, background 180ms ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary {
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--brand-a), var(--brand-b));
+      box-shadow: 0 14px 28px rgba(30, 97, 168, 0.26);
+    }
+
+    .btn-primary:hover {
+      filter: saturate(1.08) brightness(1.02);
+      box-shadow: 0 18px 34px rgba(49, 39, 131, 0.26);
+    }
+
+    .btn-secondary {
+      color: var(--brand-b);
+      background: rgba(49, 39, 131, 0.09);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(49, 39, 131, 0.14);
+    }
+
+    .btn-ghost {
+      color: #39475b;
+      background: var(--surface-soft);
+    }
+
+    .btn-ghost:hover {
+      background: #e4ebf4;
+    }
+
+    .preview-panel {
+      position: sticky;
+      top: 22px;
+      overflow: hidden;
+    }
+
+    .preview-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 20px;
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--brand-a), var(--brand-b));
+    }
+
+    .preview-top h2 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 800;
+    }
+
+    .total-chip {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.16);
+      font-size: 0.82rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .whatsapp-area {
+      padding: 20px;
+      background:
+        linear-gradient(45deg, rgba(22, 160, 133, 0.06) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(22, 160, 133, 0.06) 25%, transparent 25%),
+        #edf7f2;
+      background-size: 24px 24px;
+    }
+
+    .message-bubble {
+      width: 100%;
+      min-height: 310px;
+      margin: 0;
+      padding: 18px;
+      border: 1px solid rgba(22, 160, 133, 0.16);
+      border-radius: var(--radius);
+      color: #10251d;
+      background: #ffffff;
+      box-shadow: 0 14px 26px rgba(26, 76, 58, 0.13);
+      white-space: pre-wrap;
+      font-size: 1rem;
+      font-weight: 600;
+      line-height: 1.7;
+    }
+
+    .empty-message {
+      color: var(--muted);
+    }
+
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 10;
+      padding: 14px 16px;
+      border-radius: var(--radius);
+      color: #ffffff;
+      background: #172033;
+      box-shadow: 0 16px 36px rgba(23, 32, 51, 0.24);
+      font-weight: 800;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(12px);
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .preview-panel {
+        position: static;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .app-shell {
+        width: min(100% - 22px, 1180px);
+        padding: 18px 0;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .status-pill {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .tabs {
+        grid-template-columns: 1fr;
+      }
+
+      .form-grid,
+      .actions,
+      .discount-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .module-head,
+      .binding-row {
+        align-items: stretch;
+        grid-template-columns: 1fr;
+      }
+
+      .module-head {
+        flex-direction: column;
+      }
+
+      .btn-add,
+      .btn-delete {
+        width: 100%;
+      }
+
+      .discount-title {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .discount-note {
+        text-align: left;
+      }
+
+      .panel-header,
+      .form-grid,
+      .actions,
+      .whatsapp-area {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      .message-bubble {
+        min-height: 260px;
+        font-size: 0.95rem;
+      }
+
+      .toast {
+        right: 12px;
+        bottom: 12px;
+        left: 12px;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">P</div>
+        <div>
+          <h1>Calculadora de presupuestos</h1>
+          <p>Fotocopias, impresiones, papeles especiales y anillados</p>
+        </div>
+      </div>
+      <div class="status-pill"><span class="status-dot"></span>Lista para cotizar</div>
+    </header>
+
+    <nav class="tabs" aria-label="Secciones de presupuesto">
+      <button class="tab-button active" type="button" data-tab-target="common" aria-selected="true">Impresiones comunes</button>
+      <button class="tab-button" type="button" data-tab-target="special" aria-selected="false">Impresiones especiales</button>
+    </nav>
+
+    <section class="tab-panel active" id="commonPanel" data-tab-panel="common" aria-label="Impresiones comunes">
+      <div class="layout">
+        <form class="panel" data-calculator="common">
+          <div class="panel-header">
+            <h2 class="panel-title">Datos del trabajo</h2>
+            <span class="panel-badge">Comunes</span>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="bwPages">Cantidad de páginas B/N</label>
+              <input id="bwPages" name="bwPages" data-field="bwPages" type="number" min="0" step="1" inputmode="numeric" placeholder="0" />
+            </div>
+
+            <div class="field">
+              <label for="colorPages">Cantidad de páginas color</label>
+              <input id="colorPages" name="colorPages" data-field="colorPages" type="number" min="0" step="1" inputmode="numeric" placeholder="0" />
+            </div>
+
+            <div class="field">
+              <label for="bwPrice">Precio unitario B/N</label>
+              <input id="bwPrice" name="bwPrice" data-field="bwPrice" data-price-key="bwPrint" type="number" min="0" step="1" inputmode="numeric" value="200" />
+            </div>
+
+            <div class="field">
+              <label for="colorPrice">Precio unitario color</label>
+              <input id="colorPrice" name="colorPrice" data-field="colorPrice" data-price-key="colorPrint" type="number" min="0" step="1" inputmode="numeric" value="800" />
+            </div>
+
+            <div class="binding-module">
+              <div class="module-head">
+                <div>
+                  <h3 class="module-title">Anillados</h3>
+                  <p class="module-hint">Agregá una línea por cada tamaño o cantidad distinta.</p>
+                </div>
+                <button class="btn btn-add" type="button" data-action="add-binding">Agregar anillado</button>
+              </div>
+              <div class="binding-list" data-binding-list="common"></div>
+            </div>
+
+            <div class="discount-card">
+              <div class="discount-title">
+                <span>Descuento</span>
+                <span class="discount-note">Porcentaje y monto sincronizados</span>
+              </div>
+              <div class="discount-grid">
+                <div class="field">
+                  <label for="commonDiscountPercent">Porcentaje de descuento</label>
+                  <input id="commonDiscountPercent" name="commonDiscountPercent" data-field="discountPercent" data-discount-input="percent" type="number" min="0" max="100" step="0.01" inputmode="decimal" placeholder="0" />
+                </div>
+
+                <div class="field">
+                  <label for="commonDiscountAmount">Monto descontado</label>
+                  <input id="commonDiscountAmount" name="commonDiscountAmount" data-field="discountAmount" data-discount-input="amount" type="number" min="0" step="1" inputmode="numeric" placeholder="0" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn btn-primary" type="submit">Calcular presupuesto</button>
+            <button class="btn btn-secondary" type="button" data-action="copy">Copiar mensaje</button>
+            <button class="btn btn-ghost" type="button" data-action="clear">Limpiar</button>
+          </div>
+        </form>
+
+        <aside class="panel preview-panel" aria-label="Vista previa del mensaje de impresiones comunes">
+          <div class="preview-top">
+            <h2>Vista previa</h2>
+            <span class="total-chip" data-total-chip="common">Total $0</span>
+          </div>
+          <div class="whatsapp-area">
+            <pre class="message-bubble empty-message" data-preview="common"></pre>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="specialPanel" data-tab-panel="special" aria-label="Impresiones especiales">
+      <div class="layout">
+        <form class="panel" data-calculator="special">
+          <div class="panel-header">
+            <h2 class="panel-title">Datos del trabajo</h2>
+            <span class="panel-badge">Especiales</span>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="chambrilSheets">Cantidad de hojas Chambril / Ilustración</label>
+              <input id="chambrilSheets" name="chambrilSheets" data-field="chambrilSheets" type="number" min="0" step="1" inputmode="numeric" placeholder="0" />
+            </div>
+
+            <div class="field">
+              <label for="adhesiveSheets">Cantidad de hojas Adhesivo</label>
+              <input id="adhesiveSheets" name="adhesiveSheets" data-field="adhesiveSheets" type="number" min="0" step="1" inputmode="numeric" placeholder="0" />
+            </div>
+
+            <div class="field">
+              <label for="chambrilPrice">Precio unitario Chambril / Ilustración</label>
+              <input id="chambrilPrice" name="chambrilPrice" data-field="chambrilPrice" data-price-key="chambril" type="number" min="0" step="1" inputmode="numeric" value="1500" />
+            </div>
+
+            <div class="field">
+              <label for="adhesivePrice">Precio unitario Adhesivo</label>
+              <input id="adhesivePrice" name="adhesivePrice" data-field="adhesivePrice" data-price-key="adhesive" type="number" min="0" step="1" inputmode="numeric" value="2000" />
+            </div>
+
+            <div class="discount-card">
+              <div class="discount-title">
+                <span>Descuento</span>
+                <span class="discount-note">Porcentaje y monto sincronizados</span>
+              </div>
+              <div class="discount-grid">
+                <div class="field">
+                  <label for="specialDiscountPercent">Porcentaje de descuento</label>
+                  <input id="specialDiscountPercent" name="specialDiscountPercent" data-field="discountPercent" data-discount-input="percent" type="number" min="0" max="100" step="0.01" inputmode="decimal" placeholder="0" />
+                </div>
+
+                <div class="field">
+                  <label for="specialDiscountAmount">Monto descontado</label>
+                  <input id="specialDiscountAmount" name="specialDiscountAmount" data-field="discountAmount" data-discount-input="amount" type="number" min="0" step="1" inputmode="numeric" placeholder="0" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn btn-primary" type="submit">Calcular presupuesto</button>
+            <button class="btn btn-secondary" type="button" data-action="copy">Copiar mensaje</button>
+            <button class="btn btn-ghost" type="button" data-action="clear">Limpiar</button>
+          </div>
+        </form>
+
+        <aside class="panel preview-panel" aria-label="Vista previa del mensaje de impresiones especiales">
+          <div class="preview-top">
+            <h2>Vista previa</h2>
+            <span class="total-chip" data-total-chip="special">Total $0</span>
+          </div>
+          <div class="whatsapp-area">
+            <pre class="message-bubble empty-message" data-preview="special"></pre>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite">Mensaje copiado</div>
+
+  <script>
+    // Para sumar una pestaña en el futuro, agrega su entrada en CALCULATORS y replica un panel HTML con data-calculator.
+    const STORAGE_PREFIX = "copyBudget.price.";
+    const EMPTY_MESSAGE = "Completá las cantidades para generar el presupuesto.";
+
+    const DEFAULT_PRICES = {
+      bwPrint: 200,
+      colorPrint: 800,
+      chambril: 1500,
+      adhesive: 2000
+    };
+
+    const BINDING_OPTIONS = [
+      { id: "7-9mm", label: "7-9mm", price: 2000 },
+      { id: "12-14mm", label: "12-14mm", price: 3000 },
+      { id: "17-20mm", label: "17-20mm", price: 4000 },
+      { id: "23-25mm", label: "23-25mm", price: 5000 },
+      { id: "29-33mm", label: "29-33mm", price: 6000 },
+      { id: "40-45-50mm", label: "40-45-50mm", price: 7000 }
+    ];
+
+    const CALCULATORS = {
+      common: {
+        firstField: "bwPages",
+        priceFields: ["bwPrice", "colorPrice"],
+        getSubtotal(fields) {
+          const bwPages = getNumber(fields.bwPages);
+          const colorPages = getNumber(fields.colorPages);
+          const bwPrice = getNumber(fields.bwPrice);
+          const colorPrice = getNumber(fields.colorPrice);
+
+          return calculateTotal([
+            calculateLineTotal(bwPages, bwPrice),
+            calculateLineTotal(colorPages, colorPrice),
+            getBindingSubtotal("common")
+          ]);
+        },
+        buildMessage(fields) {
+          const bwPages = getNumber(fields.bwPages);
+          const colorPages = getNumber(fields.colorPages);
+          const bwPrice = getNumber(fields.bwPrice);
+          const colorPrice = getNumber(fields.colorPrice);
+          const groupedBindings = getGroupedBindings("common");
+
+          const bwTotal = calculateLineTotal(bwPages, bwPrice);
+          const colorTotal = calculateLineTotal(colorPages, colorPrice);
+          const subtotal = calculateTotal([bwTotal, colorTotal, getBindingSubtotal("common")]);
+          const discount = getDiscount(fields, subtotal);
+          const total = subtotal - discount.amount;
+
+          if (subtotal === 0) {
+            return { message: EMPTY_MESSAGE, total, isEmpty: true };
+          }
+
+          const lines = [
+            "Buenos Días!",
+            "",
+            `Impresion Blanco y negro : ${formatMoney(bwPrice)}`,
+            `Impresion Color: ${formatMoney(colorPrice)}`,
+            ""
+          ];
+
+          if (bwPages > 0) {
+            lines.push(`${bwPages} pag B/N: ${formatMoney(bwTotal)}`);
+          }
+
+          if (colorPages > 0) {
+            lines.push(`${colorPages} pag Color: ${formatMoney(colorTotal)}`);
+          }
+
+          groupedBindings.forEach((binding) => {
+            const label = binding.quantity === 1 ? "1 Anillado" : `${binding.quantity} Anillados`;
+            lines.push(`${label} ${binding.label}: ${formatMoney(binding.total)}`);
+          });
+
+          if (discount.amount > 0) {
+            lines.push(`Descuento (${formatPercent(discount.percent)}%): -${formatMoney(discount.amount)}`);
+          }
+
+          lines.push("", `Total ${formatMoney(total)}`);
+          return { message: lines.join("\n"), total, isEmpty: false };
+        }
+      },
+      special: {
+        firstField: "chambrilSheets",
+        priceFields: ["chambrilPrice", "adhesivePrice"],
+        getSubtotal(fields) {
+          const chambrilSheets = getNumber(fields.chambrilSheets);
+          const adhesiveSheets = getNumber(fields.adhesiveSheets);
+          const chambrilPrice = getNumber(fields.chambrilPrice);
+          const adhesivePrice = getNumber(fields.adhesivePrice);
+
+          return calculateTotal([
+            calculateLineTotal(chambrilSheets, chambrilPrice),
+            calculateLineTotal(adhesiveSheets, adhesivePrice)
+          ]);
+        },
+        buildMessage(fields) {
+          const chambrilSheets = getNumber(fields.chambrilSheets);
+          const adhesiveSheets = getNumber(fields.adhesiveSheets);
+          const chambrilPrice = getNumber(fields.chambrilPrice);
+          const adhesivePrice = getNumber(fields.adhesivePrice);
+
+          const chambrilTotal = calculateLineTotal(chambrilSheets, chambrilPrice);
+          const adhesiveTotal = calculateLineTotal(adhesiveSheets, adhesivePrice);
+          const subtotal = calculateTotal([chambrilTotal, adhesiveTotal]);
+          const discount = getDiscount(fields, subtotal);
+          const total = subtotal - discount.amount;
+
+          if (subtotal === 0) {
+            return { message: EMPTY_MESSAGE, total, isEmpty: true };
+          }
+
+          const lines = [
+            "Buenos Días!",
+            "",
+            "Impresiones especiales:",
+            "",
+            `Chambril / Ilustración: ${formatMoney(chambrilPrice)}`,
+            `Adhesivo: ${formatMoney(adhesivePrice)}`,
+            ""
+          ];
+
+          if (chambrilSheets > 0) {
+            lines.push(`${chambrilSheets} hojas Chambril / Ilustración: ${formatMoney(chambrilTotal)}`);
+          }
+
+          if (adhesiveSheets > 0) {
+            lines.push(`${adhesiveSheets} hojas Adhesivo: ${formatMoney(adhesiveTotal)}`);
+          }
+
+          if (discount.amount > 0) {
+            lines.push(`Descuento (${formatPercent(discount.percent)}%): -${formatMoney(discount.amount)}`);
+          }
+
+          lines.push("", `Total ${formatMoney(total)}`);
+          return { message: lines.join("\n"), total, isEmpty: false };
+        }
+      }
+    };
+
+    const appState = {
+      activeTab: "common",
+      forms: {},
+      bindings: {
+        common: []
+      },
+      nextBindingId: 1
+    };
+
+    const moneyFormatter = new Intl.NumberFormat("es-AR", {
+      maximumFractionDigits: 0
+    });
+
+    function formatMoney(value) {
+      return `$${moneyFormatter.format(Math.max(0, Number(value) || 0))}`;
+    }
+
+    function formatPercent(value) {
+      return new Intl.NumberFormat("es-AR", {
+        maximumFractionDigits: 2
+      }).format(Math.max(0, Number(value) || 0));
+    }
+
+    function trimDecimal(value) {
+      return Number(value.toFixed(2)).toString();
+    }
+
+    function getNumber(input) {
+      return Math.max(0, Number(input.value) || 0);
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(Math.max(Number(value) || 0, min), max);
+    }
+
+    function calculateLineTotal(quantity, unitPrice) {
+      return Math.max(0, quantity) * Math.max(0, unitPrice);
+    }
+
+    function calculateTotal(values) {
+      return values.reduce((total, value) => total + (Number(value) || 0), 0);
+    }
+
+    function getDiscount(fields, subtotal) {
+      const amount = clamp(getNumber(fields.discountAmount), 0, subtotal);
+      const percent = subtotal > 0 ? (amount / subtotal) * 100 : 0;
+
+      return { amount, percent };
+    }
+
+    function loadStoredPrice(priceKey) {
+      const storedValue = localStorage.getItem(`${STORAGE_PREFIX}${priceKey}`);
+      return storedValue === null ? DEFAULT_PRICES[priceKey] : storedValue;
+    }
+
+    function saveStoredPrice(priceKey, value) {
+      localStorage.setItem(`${STORAGE_PREFIX}${priceKey}`, String(Math.max(0, Number(value) || 0)));
+    }
+
+    function collectFields(form) {
+      return [...form.querySelectorAll("[data-field]")].reduce((fields, control) => {
+        fields[control.dataset.field] = control;
+        return fields;
+      }, {});
+    }
+
+    function setupForm(calculatorId) {
+      const form = document.querySelector(`[data-calculator="${calculatorId}"]`);
+      const calculator = CALCULATORS[calculatorId];
+      const fields = collectFields(form);
+
+      appState.forms[calculatorId] = {
+        form,
+        fields,
+        discountMode: "amount"
+      };
+
+      form.querySelectorAll("[data-price-key]").forEach((input) => {
+        input.value = loadStoredPrice(input.dataset.priceKey);
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        renderCalculator(calculatorId);
+      });
+
+      form.addEventListener("input", (event) => {
+        const control = event.target;
+
+        if (control.matches("[data-price-key]")) {
+          saveStoredPrice(control.dataset.priceKey, control.value);
+        }
+
+        if (control.matches("[data-discount-input]")) {
+          appState.forms[calculatorId].discountMode = control.dataset.discountInput;
+        }
+
+        renderCalculator(calculatorId);
+      });
+
+      form.addEventListener("change", () => renderCalculator(calculatorId));
+
+      form.querySelector("[data-action='copy']").addEventListener("click", () => copyCalculatorMessage(calculatorId));
+      form.querySelector("[data-action='clear']").addEventListener("click", () => clearCalculator(calculatorId));
+
+      const addBindingButton = form.querySelector("[data-action='add-binding']");
+
+      if (addBindingButton) {
+        addBindingButton.addEventListener("click", () => addBinding(calculatorId));
+      }
+
+      const bindingList = form.querySelector(`[data-binding-list="${calculatorId}"]`);
+
+      if (bindingList) {
+        bindingList.addEventListener("change", (event) => {
+          const control = event.target.closest("[data-binding-field]");
+
+          if (!control) {
+            return;
+          }
+
+          const row = control.closest("[data-binding-id]");
+          updateBinding(Number(row.dataset.bindingId), control.dataset.bindingField, control.value, calculatorId);
+        });
+
+        bindingList.addEventListener("click", (event) => {
+          const removeButton = event.target.closest("[data-binding-remove]");
+
+          if (!removeButton) {
+            return;
+          }
+
+          const row = removeButton.closest("[data-binding-id]");
+          removeBinding(Number(row.dataset.bindingId), calculatorId);
+        });
+      }
+
+      renderBindings(calculatorId);
+      renderCalculator(calculatorId);
+      fields[calculator.firstField].setAttribute("autocomplete", "off");
+    }
+
+    function renderCalculator(calculatorId) {
+      const calculator = CALCULATORS[calculatorId];
+      const { fields } = appState.forms[calculatorId];
+      syncDiscountFields(calculatorId);
+      const result = calculator.buildMessage(fields);
+      const preview = document.querySelector(`[data-preview="${calculatorId}"]`);
+      const totalChip = document.querySelector(`[data-total-chip="${calculatorId}"]`);
+
+      preview.textContent = result.message;
+      preview.classList.toggle("empty-message", result.isEmpty);
+      totalChip.textContent = `Total ${formatMoney(result.total)}`;
+
+      return result;
+    }
+
+    function addBinding(calculatorId = "common") {
+      const defaultType = BINDING_OPTIONS[0].id;
+
+      appState.bindings[calculatorId].push({
+        id: appState.nextBindingId++,
+        type: defaultType,
+        quantity: 1
+      });
+
+      renderBindings(calculatorId);
+      renderCalculator(calculatorId);
+    }
+
+    function removeBinding(id, calculatorId = "common") {
+      appState.bindings[calculatorId] = appState.bindings[calculatorId].filter((binding) => binding.id !== id);
+      renderBindings(calculatorId);
+      renderCalculator(calculatorId);
+    }
+
+    function updateBinding(id, field, value, calculatorId = "common") {
+      appState.bindings[calculatorId] = appState.bindings[calculatorId].map((binding) => {
+        if (binding.id !== id) {
+          return binding;
+        }
+
+        return {
+          ...binding,
+          [field]: field === "quantity" ? Math.max(0, Number(value) || 0) : value
+        };
+      });
+
+      renderBindings(calculatorId);
+      renderCalculator(calculatorId);
+    }
+
+    function getBindingOption(type) {
+      return BINDING_OPTIONS.find((option) => option.id === type) || BINDING_OPTIONS[0];
+    }
+
+    function getBindingSubtotal(calculatorId = "common") {
+      return appState.bindings[calculatorId].reduce((total, binding) => {
+        const option = getBindingOption(binding.type);
+        return total + calculateLineTotal(binding.quantity, option.price);
+      }, 0);
+    }
+
+    function getGroupedBindings(calculatorId = "common") {
+      const grouped = new Map();
+
+      appState.bindings[calculatorId].forEach((binding) => {
+        const quantity = Math.max(0, Number(binding.quantity) || 0);
+
+        if (quantity === 0) {
+          return;
+        }
+
+        const option = getBindingOption(binding.type);
+        const current = grouped.get(option.id) || {
+          id: option.id,
+          label: option.label,
+          price: option.price,
+          quantity: 0,
+          total: 0
+        };
+
+        current.quantity += quantity;
+        current.total += calculateLineTotal(quantity, option.price);
+        grouped.set(option.id, current);
+      });
+
+      return [...grouped.values()];
+    }
+
+    function renderBindings(calculatorId = "common") {
+      const list = document.querySelector(`[data-binding-list="${calculatorId}"]`);
+
+      if (!list) {
+        return;
+      }
+
+      if (appState.bindings[calculatorId].length === 0) {
+        list.innerHTML = `<p class="binding-empty">Todavía no agregaste anillados a este presupuesto.</p>`;
+        return;
+      }
+
+      list.innerHTML = appState.bindings[calculatorId].map((binding) => {
+        const option = getBindingOption(binding.type);
+        const subtotal = calculateLineTotal(binding.quantity, option.price);
+        const optionsMarkup = BINDING_OPTIONS.map((bindingOption) => {
+          const selected = bindingOption.id === binding.type ? "selected" : "";
+          return `<option value="${bindingOption.id}" ${selected}>${bindingOption.label}</option>`;
+        }).join("");
+
+        return `
+          <div class="binding-row" data-binding-id="${binding.id}">
+            <div class="field">
+              <label for="bindingType${binding.id}">Tipo/tamaño</label>
+              <select id="bindingType${binding.id}" data-binding-field="type">
+                ${optionsMarkup}
+              </select>
+            </div>
+            <div class="field">
+              <label for="bindingQty${binding.id}">Cantidad</label>
+              <input id="bindingQty${binding.id}" data-binding-field="quantity" type="number" min="0" step="1" inputmode="numeric" value="${binding.quantity}">
+            </div>
+            <div class="field">
+              <label>Precio unitario</label>
+              <div class="readonly-value">${formatMoney(option.price)}</div>
+            </div>
+            <div class="field">
+              <label>Subtotal</label>
+              <div class="readonly-value">${formatMoney(subtotal)}</div>
+            </div>
+            <button class="btn btn-delete" type="button" data-binding-remove aria-label="Eliminar anillado">×</button>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function syncDiscountFields(calculatorId) {
+      const calculator = CALCULATORS[calculatorId];
+      const state = appState.forms[calculatorId];
+      const { fields } = state;
+
+      if (!fields.discountPercent || !fields.discountAmount) {
+        return;
+      }
+
+      const subtotal = calculator.getSubtotal(fields);
+      let percent = 0;
+      let amount = 0;
+
+      if (subtotal > 0 && state.discountMode === "percent") {
+        percent = clamp(getNumber(fields.discountPercent), 0, 100);
+        amount = Math.round((subtotal * percent) / 100);
+      }
+
+      if (subtotal > 0 && state.discountMode === "amount") {
+        amount = Math.round(clamp(getNumber(fields.discountAmount), 0, subtotal));
+        percent = (amount / subtotal) * 100;
+      }
+
+      fields.discountPercent.value = percent === 0 ? "" : trimDecimal(percent);
+      fields.discountAmount.value = amount === 0 ? "" : String(amount);
+    }
+
+    async function copyCalculatorMessage(calculatorId = appState.activeTab) {
+      const result = renderCalculator(calculatorId);
+      await copyToClipboard(result.message);
+      showToast("Mensaje copiado");
+    }
+
+    async function copyToClipboard(message) {
+      try {
+        await navigator.clipboard.writeText(message);
+      } catch (error) {
+        const tempArea = document.createElement("textarea");
+        tempArea.value = message;
+        document.body.appendChild(tempArea);
+        tempArea.select();
+        document.execCommand("copy");
+        tempArea.remove();
+      }
+    }
+
+    function clearCalculator(calculatorId) {
+      const calculator = CALCULATORS[calculatorId];
+      const { form, fields } = appState.forms[calculatorId];
+
+      form.querySelectorAll("input:not([data-price-key])").forEach((input) => {
+        input.value = "";
+      });
+
+      appState.forms[calculatorId].discountMode = "amount";
+
+      form.querySelectorAll("[data-price-key]").forEach((input) => {
+        input.value = loadStoredPrice(input.dataset.priceKey);
+      });
+
+      if (appState.bindings[calculatorId]) {
+        appState.bindings[calculatorId] = [];
+        renderBindings(calculatorId);
+      }
+
+      renderCalculator(calculatorId);
+      fields[calculator.firstField].focus();
+    }
+
+    function showToast(message) {
+      const toast = document.querySelector("#toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      window.clearTimeout(showToast.timeoutId);
+      showToast.timeoutId = window.setTimeout(() => {
+        toast.classList.remove("show");
+      }, 1800);
+    }
+
+    function setActiveTab(tabId) {
+      appState.activeTab = tabId;
+
+      document.querySelectorAll("[data-tab-target]").forEach((button) => {
+        const isActive = button.dataset.tabTarget === tabId;
+        button.classList.toggle("active", isActive);
+        button.setAttribute("aria-selected", String(isActive));
+      });
+
+      document.querySelectorAll("[data-tab-panel]").forEach((panel) => {
+        panel.classList.toggle("active", panel.dataset.tabPanel === tabId);
+      });
+
+      renderCalculator(tabId);
+    }
+
+    document.querySelectorAll("[data-tab-target]").forEach((button) => {
+      button.addEventListener("click", () => setActiveTab(button.dataset.tabTarget));
+    });
+
+    Object.keys(CALCULATORS).forEach(setupForm);
+  </script>
+</body>
+</html>

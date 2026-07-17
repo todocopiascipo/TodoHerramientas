@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Inversor B/N para impresión</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="intro">
+        <div>
+          <p class="eyebrow">Procesamiento local</p>
+          <h1>Inversor B/N para impresión</h1>
+          <p class="summary">
+            Esta herramienta invierte archivos con fondo negro para facilitar la impresión y reducir el consumo de tóner.
+          </p>
+          <p class="privacy">Los archivos se procesan localmente en tu navegador.</p>
+        </div>
+      </section>
+
+      <section class="workspace" aria-label="Herramienta de inversión blanco y negro">
+        <aside class="panel controls-panel">
+          <label class="drop-zone" id="dropZone" for="fileInput">
+            <input id="fileInput" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf,image/png,image/jpeg,image/webp,application/pdf" />
+            <span class="upload-icon" aria-hidden="true">+</span>
+            <strong>Subir archivo</strong>
+            <span>PNG, JPG, JPEG, WEBP o PDF</span>
+            <small>También puedes arrastrar y soltar aquí</small>
+          </label>
+
+          <div class="file-status">
+            <span>Archivo</span>
+            <strong id="fileName">Ningún archivo cargado</strong>
+          </div>
+          <p class="message" id="message" role="status"></p>
+
+          <div class="options">
+            <div class="option-row">
+              <span>Modo ahorro de tóner</span>
+              <label class="switch">
+                <input id="tonerMode" type="checkbox" checked />
+                <span></span>
+              </label>
+            </div>
+
+            <div class="option-row">
+              <span>Invertir colores completo</span>
+              <label class="switch">
+                <input id="fullInvert" type="checkbox" />
+                <span></span>
+              </label>
+            </div>
+
+            <div class="option-row">
+              <span>Convertir a escala de grises</span>
+              <label class="switch">
+                <input id="grayscale" type="checkbox" checked />
+                <span></span>
+              </label>
+            </div>
+
+            <label class="slider-row">
+              <span>Umbral de negro <output id="blackThresholdValue">48</output></span>
+              <input id="blackThreshold" type="range" min="0" max="255" value="48" />
+            </label>
+
+            <label class="slider-row">
+              <span>Umbral de blanco <output id="whiteThresholdValue">210</output></span>
+              <input id="whiteThreshold" type="range" min="0" max="255" value="210" />
+            </label>
+
+            <label class="slider-row">
+              <span>Contraste final <output id="contrastValue">12</output></span>
+              <input id="contrast" type="range" min="-50" max="80" value="12" />
+            </label>
+
+            <label class="select-row">
+              <span>Resolución para PDF</span>
+              <select id="pdfDpi">
+                <option value="150">150 dpi</option>
+                <option value="200" selected>200 dpi</option>
+                <option value="300">300 dpi</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="actions">
+            <button id="processBtn" class="primary" type="button" disabled>Procesar archivo</button>
+            <button id="downloadBtn" type="button" disabled>Descargar resultado</button>
+            <button id="clearBtn" class="ghost" type="button">Limpiar</button>
+          </div>
+        </aside>
+
+        <section class="preview-panel">
+          <div class="preview-toolbar">
+            <div class="segmented" aria-label="Cambiar vista previa">
+              <button id="showOriginalBtn" class="active" type="button">Ver original</button>
+              <button id="showResultBtn" type="button">Ver invertido</button>
+            </div>
+            <span id="previewLabel">Vista original</span>
+          </div>
+
+          <div class="preview-stage">
+            <canvas id="originalCanvas"></canvas>
+            <canvas id="resultCanvas" hidden></canvas>
+            <div class="empty-preview" id="emptyPreview">
+              <strong>Previsualización</strong>
+              <span>Carga una imagen o PDF para ver el resultado.</span>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

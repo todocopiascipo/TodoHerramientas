@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Generador de laminas A4 para figuritas, fotos carnet y folletos A6/A5.">
+  <title>Auto-Foto | Generador A4</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-mark">AF</span>
+        <div>
+          <p class="eyebrow">Generador de laminas</p>
+          <h1>Auto-Foto</h1>
+        </div>
+      </div>
+
+      <div class="module-bar" aria-label="Modulos disponibles">
+        <span class="module-label">Modulos</span>
+        <div class="mode-tabs" role="tablist" aria-label="Tipo de lamina">
+          <button class="mode-tab is-active" type="button" data-mode="figuritas">Figuritas</button>
+          <button class="mode-tab" type="button" data-mode="carnet">Foto carnet</button>
+          <button class="mode-tab" type="button" data-mode="personalizado">Personalizado</button>
+          <button class="mode-tab" type="button" data-mode="folletos">Folletos A6</button>
+          <button class="mode-tab" type="button" data-mode="folletoA5">Folleto A5</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <section class="controls" aria-labelledby="settingsTitle">
+        <div class="panel-heading">
+          <p class="eyebrow">Ajustes</p>
+          <h2 id="settingsTitle">Preparar imagen</h2>
+        </div>
+
+        <label id="uploadZone" class="upload-zone" for="imageInput">
+          <span class="upload-icon">+</span>
+          <strong>Elegir imagen</strong>
+          <span>JPG o PNG, tambien podes arrastrarla aca</span>
+          <input id="imageInput" type="file" accept="image/jpeg,image/png">
+        </label>
+
+        <div id="fileInfo" class="file-info" aria-live="polite">
+          Todavia no seleccionaste una imagen.
+        </div>
+
+        <div id="customOptions" class="custom-options" hidden>
+          <div class="option-heading">
+            <strong>Tamano personalizado</strong>
+            <span>Defini el tamano final de cada copia. La hoja calcula filas, columnas y espacios automaticamente.</span>
+          </div>
+          <div class="size-grid">
+            <label>
+              Ancho
+              <span>
+                <input id="customWidthInput" type="number" min="10" max="200" step="0.5" value="40">
+                mm
+              </span>
+            </label>
+            <label>
+              Alto
+              <span>
+                <input id="customHeightInput" type="number" min="10" max="287" step="0.5" value="40">
+                mm
+              </span>
+            </label>
+            <label>
+              Margen hoja
+              <span>
+                <input id="customMarginInput" type="number" min="0" max="25" step="0.5" value="5">
+                mm
+              </span>
+            </label>
+          </div>
+          <p id="customLayoutInfo" class="option-note">Calculando distribucion...</p>
+        </div>
+
+        <div id="fitOptions" class="fit-options" hidden>
+          <button id="fitToggleButton" class="secondary-button" type="button" aria-pressed="false">
+            Ajustar imagen
+          </button>
+          <p id="fitModeHelp" class="option-note">
+            Modo actual: recortar para llenar el area util.
+          </p>
+        </div>
+
+        <div id="cropOptions" class="crop-options" hidden>
+          <div class="option-heading">
+            <strong id="cropOptionsTitle">Recorte de la imagen</strong>
+            <span id="cropOptionsHelp">Elegi que zona conservar si la imagen no coincide con el formato.</span>
+          </div>
+          <div id="cropGrid" class="crop-grid" role="group" aria-label="Zona de recorte">
+            <button type="button" data-focus-x="0" data-focus-y="0">Arriba izq.</button>
+            <button type="button" data-focus-x="0.5" data-focus-y="0">Arriba</button>
+            <button type="button" data-focus-x="1" data-focus-y="0">Arriba der.</button>
+            <button type="button" data-focus-x="0" data-focus-y="0.5">Izquierda</button>
+            <button class="is-active" type="button" data-focus-x="0.5" data-focus-y="0.5">Centro</button>
+            <button type="button" data-focus-x="1" data-focus-y="0.5">Derecha</button>
+            <button type="button" data-focus-x="0" data-focus-y="1">Abajo izq.</button>
+            <button type="button" data-focus-x="0.5" data-focus-y="1">Abajo</button>
+            <button type="button" data-focus-x="1" data-focus-y="1">Abajo der.</button>
+          </div>
+          <div id="cropEditor" class="crop-editor" hidden>
+            <canvas id="cropEditorCanvas" aria-label="Editor visual de recorte"></canvas>
+          </div>
+          <div id="zoomControl" class="zoom-control" hidden>
+            <div class="zoom-heading">
+              <label for="zoomSlider">Zoom</label>
+              <span id="zoomValue">100%</span>
+            </div>
+            <input id="zoomSlider" type="range" min="1" max="3" step="0.01" value="1">
+          </div>
+        </div>
+
+        <button id="generateButton" class="primary-button" type="button" disabled>
+          Generar PDF
+        </button>
+
+        <p id="statusMessage" class="status-message" aria-live="polite"></p>
+      </section>
+
+      <section class="preview-panel" aria-labelledby="previewTitle">
+        <div class="preview-heading">
+          <div>
+            <p class="eyebrow">Vista previa</p>
+            <h2 id="previewTitle">Hoja A4 vertical</h2>
+          </div>
+          <span id="paperSummary" class="paper-size">210 x 297 mm</span>
+        </div>
+
+        <div class="paper-frame">
+          <canvas id="previewCanvas" aria-label="Vista previa de la composicion A4"></canvas>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="jspdf.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
