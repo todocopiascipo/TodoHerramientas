@@ -389,7 +389,7 @@ input[readonly] {
   border: 1px solid #d7e1ed;
   border-radius: 8px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   margin-bottom: 12px;
   padding: 4px;
 }
@@ -408,6 +408,10 @@ input[readonly] {
   background: #ffffff;
   box-shadow: 0 1px 6px rgba(15, 23, 42, 0.12);
   color: #1e61a8;
+}
+
+.compact-toggle {
+  margin-bottom: 12px;
 }
 
 .style-group {

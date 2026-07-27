@@ -41,11 +41,33 @@ const DEFAULT_CONFIG = {
     font: 'Helvetica',
     color: '#111827',
     align: 'left'
+  },
+  secondNumberEnabled: false,
+  number2: {
+    x: 420,
+    y: 742,
+    size: 12,
+    font: 'Helvetica',
+    color: '#111827',
+    align: 'left'
   }
 };
 
 function cloneConfig(config) {
   return JSON.parse(JSON.stringify(config));
+}
+
+function normalizeConfig(config) {
+  const base = cloneConfig(DEFAULT_CONFIG);
+  const incoming = cloneConfig(config || {});
+  return {
+    ...base,
+    ...incoming,
+    badge: { ...base.badge, ...(incoming.badge || {}) },
+    number: { ...base.number, ...(incoming.number || {}) },
+    number2: { ...base.number2, ...(incoming.number2 || {}) },
+    secondNumberEnabled: Boolean(incoming.secondNumberEnabled)
+  };
 }
 
 function hexToRgb(hex) {
@@ -157,6 +179,9 @@ async function createNumberedPdf(basePdfBytes, config, customFonts, previewOnly 
 
   const badgeFont = await embedSelectedFont(outputPdf, config.badge.font, customFonts);
   const numberFont = await embedSelectedFont(outputPdf, config.number.font, customFonts);
+  const number2Font = config.secondNumberEnabled
+    ? await embedSelectedFont(outputPdf, config.number2.font, customFonts)
+    : null;
   const firstPageIndex = 0;
   const start = Number(config.startNumber);
   const end = previewOnly ? start : Number(config.endNumber);
@@ -174,6 +199,7 @@ async function createNumberedPdf(basePdfBytes, config, customFonts, previewOnly 
       outputPdf.addPage(page);
       if (label) drawAlignedText(page, label, config.badge, badgeFont);
       drawAlignedText(page, numberText, config.number, numberFont);
+      if (config.secondNumberEnabled) drawAlignedText(page, numberText, config.number2, number2Font);
     }
   }
 
@@ -198,7 +224,7 @@ function FieldMarker({ label, color, position, scale, pdfHeight, active, onPoint
 }
 
 function TalonariosTool({ mode = 'generator', onGoHome }) {
-  const [config, setConfig] = useState(() => cloneConfig(DEFAULT_CONFIG));
+  const [config, setConfig] = useState(() => normalizeConfig(DEFAULT_CONFIG));
   const [pdfFileName, setPdfFileName] = useState('');
   const [pdfBytes, setPdfBytes] = useState(null);
   const [pdfPageSize, setPdfPageSize] = useState({ width: 595, height: 842 });
@@ -223,14 +249,22 @@ function TalonariosTool({ mode = 'generator', onGoHome }) {
 
   const updateConfig = useCallback((path, value) => {
     setConfig((current) => {
-      const next = cloneConfig(current);
+      const next = normalizeConfig(current);
       const parts = path.split('.');
       let target = next;
-      for (let index = 0; index < parts.length - 1; index += 1) target = target[parts[index]];
+      for (let index = 0; index < parts.length - 1; index += 1) {
+        if (!target[parts[index]]) target[parts[index]] = {};
+        target = target[parts[index]];
+      }
       target[parts[parts.length - 1]] = value;
       return next;
     });
   }, []);
+
+  const toggleSecondNumber = useCallback((enabled) => {
+    setConfig((current) => ({ ...normalizeConfig(current), secondNumberEnabled: enabled }));
+    if (!enabled && activeField === 'number2') setActiveField('number');
+  }, [activeField]);
 
   const renderBasePdf = useCallback(async (bytes) => {
     if (!bytes || !canvasRef.current) return;
@@ -348,7 +382,7 @@ function TalonariosTool({ mode = 'generator', onGoHome }) {
       return;
     }
     try {
-      const previewConfig = { ...cloneConfig(config), endNumber: config.startNumber };
+      const previewConfig = { ...normalizeConfig(config), endNumber: config.startNumber };
       const bytes = await createNumberedPdf(pdfBytes, previewConfig, customFonts, true);
       await renderPreviewCanvases(bytes);
       setStatus('Vista previa generada');
@@ -387,7 +421,7 @@ function TalonariosTool({ mode = 'generator', onGoHome }) {
       return;
     }
     const withoutSame = presets.filter((preset) => preset.name !== name);
-    const next = [...withoutSame, { name, config: cloneConfig(config) }].sort((a, b) => a.name.localeCompare(b.name));
+    const next = [...withoutSame, { name, config: normalizeConfig(config) }].sort((a, b) => a.name.localeCompare(b.name));
     setPresets(next);
     savePresets(next);
     setSelectedPreset(name);
@@ -397,7 +431,7 @@ function TalonariosTool({ mode = 'generator', onGoHome }) {
   const loadSelectedPreset = () => {
     const preset = presets.find((item) => item.name === selectedPreset);
     if (!preset) return;
-    setConfig({ ...cloneConfig(DEFAULT_CONFIG), ...cloneConfig(preset.config) });
+    setConfig(normalizeConfig(preset.config));
     setStatus('Preset cargado');
   };
 
@@ -480,12 +514,30 @@ function TalonariosTool({ mode = 'generator', onGoHome }) {
             <div className="segmented">
               <button type="button" className={activeField === 'badge' ? 'selected' : ''} onClick={() => setActiveField('badge')}>ORIGINAL/COPIA</button>
               <button type="button" className={activeField === 'number' ? 'selected' : ''} onClick={() => setActiveField('number')}>Numeración</button>
+              <button type="button" className={activeField === 'number2' ? 'selected' : ''} onClick={() => setActiveField('number2')} disabled={!config.secondNumberEnabled}>Numeracion 2</button>
+            </div>
+            <div className="toggle-row compact-toggle">
+              <span>Segunda etiqueta de numero</span>
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={config.secondNumberEnabled}
+                  onChange={(event) => toggleSecondNumber(event.target.checked)}
+                />
+                <span />
+              </label>
             </div>
             <div className="grid two">
               <label>Insignia X<input type="number" step="0.1" value={config.badge.x} onChange={(event) => updateConfig('badge.x', Number(event.target.value))} /></label>
               <label>Insignia Y<input type="number" step="0.1" value={config.badge.y} onChange={(event) => updateConfig('badge.y', Number(event.target.value))} /></label>
               <label>Número X<input type="number" step="0.1" value={config.number.x} onChange={(event) => updateConfig('number.x', Number(event.target.value))} /></label>
               <label>Número Y<input type="number" step="0.1" value={config.number.y} onChange={(event) => updateConfig('number.y', Number(event.target.value))} /></label>
+              {config.secondNumberEnabled && (
+                <>
+                  <label>Número 2 X<input type="number" step="0.1" value={config.number2.x} onChange={(event) => updateConfig('number2.x', Number(event.target.value))} /></label>
+                  <label>Número 2 Y<input type="number" step="0.1" value={config.number2.y} onChange={(event) => updateConfig('number2.y', Number(event.target.value))} /></label>
+                </>
+              )}
             </div>
           </section>
 
@@ -497,6 +549,9 @@ function TalonariosTool({ mode = 'generator', onGoHome }) {
             </label>
             <StyleFields title="Insignia" field="badge" config={config.badge} fontOptions={fontOptions} updateConfig={updateConfig} />
             <StyleFields title="Numeración" field="number" config={config.number} fontOptions={fontOptions} updateConfig={updateConfig} />
+            {config.secondNumberEnabled && (
+              <StyleFields title="Numeracion 2" field="number2" config={config.number2} fontOptions={fontOptions} updateConfig={updateConfig} />
+            )}
           </section>
 
           <section className="panel-section">
@@ -568,6 +623,21 @@ function TalonariosTool({ mode = 'generator', onGoHome }) {
                       setDraggingField('number');
                     }}
                   />
+                  {config.secondNumberEnabled && (
+                    <FieldMarker
+                      label="N° 2"
+                      color="#7c3aed"
+                      position={config.number2}
+                      scale={renderScale}
+                      pdfHeight={pdfPageSize.height}
+                      active={activeField === 'number2'}
+                      onPointerDown={(event) => {
+                        event.preventDefault();
+                        setActiveField('number2');
+                        setDraggingField('number2');
+                      }}
+                    />
+                  )}
                 </>
               )}
             </div>
