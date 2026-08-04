@@ -775,6 +775,13 @@ const TOOLS = [
     title: 'Inversor B/N Impresion',
     icon: 'BN',
     description: 'Inverti blanco y negro para preparar archivos de impresion desde la aplicacion integrada.'
+  },
+  {
+    id: 'todopedidos',
+    path: '/todopedidos',
+    title: 'TodoPedidos',
+    icon: 'TP',
+    description: 'Arma pedidos para proveedores con listas guardadas, copiado rapido y matching opcional contra Excel.'
   }
 ];
 
@@ -828,7 +835,9 @@ function SuiteApp() {
           ? 'autofigu'
           : path === '/inversor-bn-impresion'
             ? 'inversor-bn-impresion'
-            : 'home';
+            : path === '/todopedidos'
+              ? 'todopedidos'
+              : 'home';
 
   return (
     <main className="app-shell">
@@ -881,6 +890,13 @@ function SuiteApp() {
           >
             Inversor B/N
           </button>
+          <button
+            type="button"
+            className={activeTool === 'todopedidos' ? 'active' : ''}
+            onClick={() => navigate('/todopedidos')}
+          >
+            TodoPedidos
+          </button>
         </nav>
       </header>
 
@@ -905,6 +921,16 @@ function SuiteApp() {
           subtitle="Inversion de blanco y negro para preparar archivos antes de imprimir."
           src="/apps/inversor-bn-impresion/index.html"
           iframeTitle="Inversor B/N Impresion"
+          onGoHome={() => navigate('/')}
+        />
+      )}
+      {activeTool === 'todopedidos' && (
+        <EmbeddedAppTool
+          eyebrow="Herramienta de compras"
+          title="TodoPedidos"
+          subtitle="Listas de pedido con Excel opcional, precios esperados y guardado local."
+          src="/apps/todopedidos/index.html"
+          iframeTitle="TodoPedidos"
           onGoHome={() => navigate('/')}
         />
       )}
