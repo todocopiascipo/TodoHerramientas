@@ -1,6 +1,6 @@
 # Todo Copias - Suite fusionada
 
-Web app local con seis herramientas integradas:
+Web app local con siete herramientas integradas:
 
 - Presupuestos: calculadora para fotocopias, impresiones, papeles especiales y anillados.
 - Talonarios: numerador PDF ORIGINAL/COPIA para plantillas limpias.
@@ -8,6 +8,7 @@ Web app local con seis herramientas integradas:
 - AutoFigu: generador de laminas A4 para figuritas, fotos carnet y folletos.
 - Inversor B/N Impresion: herramienta para invertir blanco y negro antes de imprimir.
 - TodoPedidos: armado de pedidos para proveedores con Excel opcional, precios estimados y listas guardadas.
+- TodoAutos: generador de carteles A4 para vinilo rotulado con exportacion SVG/PNG transparente.
 
 ## Requisitos
 
@@ -46,6 +47,7 @@ Las aplicaciones agregadas quedaron copiadas dentro de:
 public/apps/autofigu
 public/apps/inversor-bn-impresion
 public/apps/todopedidos
+public/apps/todoautos
 ```
 
 Las carpetas originales usadas como fuente no fueron modificadas.

@@ -97,6 +97,7 @@ h1 {
   border: 1px solid #d7e1ed;
   border-radius: 999px;
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   padding: 6px;
 }

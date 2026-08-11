@@ -782,6 +782,13 @@ const TOOLS = [
     title: 'TodoPedidos',
     icon: 'TP',
     description: 'Arma pedidos para proveedores con listas guardadas, copiado rapido y matching opcional contra Excel.'
+  },
+  {
+    id: 'todoautos',
+    path: '/todoautos',
+    title: 'TodoAutos',
+    icon: 'TA',
+    description: 'Genera carteles A4 para vinilo rotulado con fondo transparente, encabezado calado y exportacion SVG/PNG.'
   }
 ];
 
@@ -837,7 +844,9 @@ function SuiteApp() {
             ? 'inversor-bn-impresion'
             : path === '/todopedidos'
               ? 'todopedidos'
-              : 'home';
+              : path === '/todoautos'
+                ? 'todoautos'
+                : 'home';
 
   return (
     <main className="app-shell">
@@ -897,6 +906,13 @@ function SuiteApp() {
           >
             TodoPedidos
           </button>
+          <button
+            type="button"
+            className={activeTool === 'todoautos' ? 'active' : ''}
+            onClick={() => navigate('/todoautos')}
+          >
+            TodoAutos
+          </button>
         </nav>
       </header>
 
@@ -931,6 +947,16 @@ function SuiteApp() {
           subtitle="Listas de pedido con Excel opcional, precios esperados y guardado local."
           src="/apps/todopedidos/index.html"
           iframeTitle="TodoPedidos"
+          onGoHome={() => navigate('/')}
+        />
+      )}
+      {activeTool === 'todoautos' && (
+        <EmbeddedAppTool
+          eyebrow="Herramienta de rotulacion"
+          title="TodoAutos"
+          subtitle="Carteles A4 para vinilo con fondo transparente, texto calado y exportacion SVG o PNG."
+          src="/apps/todoautos/index.html"
+          iframeTitle="TodoAutos"
           onGoHome={() => navigate('/')}
         />
       )}

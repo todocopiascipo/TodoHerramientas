@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Generador Cartel A4 TodoAutos</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #e8ecef;
+      --ink: #111111;
+      --panel: #f8f9fa;
+      --line: #c8ced4;
+      --accent: #d82020;
+      --accent-ink: #ffffff;
+      --muted: #5d6872;
+      --shadow: 0 14px 34px rgba(20, 25, 30, .14);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--ink);
+      background:
+        linear-gradient(135deg, rgba(216, 32, 32, .08), transparent 32%),
+        linear-gradient(315deg, rgba(32, 120, 120, .08), transparent 38%),
+        var(--bg);
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: minmax(280px, 410px) minmax(320px, 1fr);
+      gap: 20px;
+      width: min(1180px, calc(100% - 32px));
+      margin: 24px auto;
+      align-items: start;
+    }
+
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 4px 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(24px, 4vw, 42px);
+      line-height: .95;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    header p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      max-width: 620px;
+    }
+
+    .controls,
+    .preview-shell,
+    .output {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .controls {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #29313a;
+    }
+
+    textarea,
+    input,
+    select {
+      width: 100%;
+      border: 1px solid #aeb7c0;
+      border-radius: 6px;
+      background: #ffffff;
+      color: var(--ink);
+      font: inherit;
+      padding: 10px 11px;
+    }
+
+    textarea {
+      min-height: 116px;
+      resize: vertical;
+      line-height: 1.35;
+    }
+
+    input[type="range"] {
+      padding: 0;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .checks {
+      display: grid;
+      gap: 8px;
+    }
+
+    .check {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 14px;
+      color: #29313a;
+    }
+
+    .check input {
+      width: auto;
+    }
+
+    button {
+      border: 1px solid #aeb7c0;
+      border-radius: 6px;
+      background: #ffffff;
+      color: #111111;
+      min-height: 42px;
+      padding: 0 14px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button.primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: var(--accent-ink);
+    }
+
+    button:hover {
+      filter: brightness(.97);
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    .preview-shell {
+      padding: 14px;
+      overflow: hidden;
+    }
+
+    .preview-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .preview-wrap {
+      width: 100%;
+      background:
+        linear-gradient(45deg, #d8dde2 25%, transparent 25%),
+        linear-gradient(-45deg, #d8dde2 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #d8dde2 75%),
+        linear-gradient(-45deg, transparent 75%, #d8dde2 75%);
+      background-size: 22px 22px;
+      background-position: 0 0, 0 11px, 11px -11px, -11px 0;
+      border-radius: 8px;
+      padding: 16px;
+      display: grid;
+      place-items: center;
+      min-height: 360px;
+    }
+
+    #preview {
+      width: 100%;
+      max-height: 680px;
+      overflow: visible;
+      filter: drop-shadow(0 8px 18px rgba(0, 0, 0, .24));
+    }
+
+    .output {
+      grid-column: 1 / -1;
+      padding: 14px;
+    }
+
+    .output textarea {
+      min-height: 180px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+      white-space: pre;
+      overflow: auto;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      margin: 0;
+    }
+
+    @media (max-width: 880px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      header {
+        display: block;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .app {
+        width: min(100% - 20px, 1180px);
+        margin: 10px auto;
+      }
+
+      .row,
+      .actions {
+        grid-template-columns: 1fr;
+      }
+
+      .preview-wrap {
+        min-height: 260px;
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div>
+        <h1>Cartel SVG A4</h1>
+        <p>Genera el vinilo A4: borde, encabezado calado y texto relleno, sin fondo negro exportado.</p>
+      </div>
+      <p class="hint">A4 horizontal: 297 x 210 mm. A4 vertical: 210 x 297 mm.</p>
+    </header>
+
+    <section class="controls" aria-label="Controles del generador">
+      <div class="field">
+        <label for="titleText">Titulo</label>
+        <input id="titleText" type="text" value="VENDO" spellcheck="false">
+      </div>
+
+      <div class="field">
+        <label for="bodyText">Texto inferior</label>
+        <textarea id="bodyText" spellcheck="false">GOL MOD. 2015
+P/AL DIA 15.000KM
+15-5555-0000</textarea>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="orientation">Formato A4</label>
+          <select id="orientation">
+            <option value="landscape">Horizontal</option>
+            <option value="portrait">Vertical</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="font">Fuente</label>
+          <select id="font">
+            <option value="Arial Black, Impact, sans-serif">Arial Black</option>
+            <option value="Impact, Haettenschweiler, sans-serif">Impact</option>
+            <option value="Arial Narrow, Arial, sans-serif">Arial Narrow</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="margin">Margen interno</label>
+          <input id="margin" type="range" min="3" max="18" value="5">
+        </div>
+        <div class="field">
+          <label for="corner">Esquinas</label>
+          <input id="corner" type="range" min="0" max="12" value="5">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="border">Borde</label>
+          <input id="border" type="range" min=".5" max="5" step=".25" value="2.2">
+        </div>
+        <div class="field">
+          <label for="headerHeight">Alto titulo</label>
+          <input id="headerHeight" type="range" min="36" max="86" value="54">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="titleScale">Tamano titulo</label>
+          <input id="titleScale" type="range" min="62" max="94" value="82">
+        </div>
+        <div class="field">
+          <label for="bodyScale">Tamano texto</label>
+          <input id="bodyScale" type="range" min="58" max="94" value="82">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="gap">Separacion lineas</label>
+          <input id="gap" type="range" min="0" max="12" value="4">
+        </div>
+      </div>
+
+      <div class="checks">
+        <label class="check">
+          <input id="uppercase" type="checkbox" checked>
+          Convertir todo a mayusculas
+        </label>
+      </div>
+
+      <div class="actions">
+        <button class="primary" id="download" type="button">Descargar SVG</button>
+        <button class="primary" id="downloadPng" type="button">Descargar PNG</button>
+        <button id="copy" type="button">Copiar SVG</button>
+      </div>
+      <p class="hint" id="status" aria-live="polite"></p>
+    </section>
+
+    <section class="preview-shell" aria-label="Vista previa">
+      <div class="preview-top">
+        <strong>Vista previa del SVG exportado</strong>
+        <span id="sizeLabel">297 x 210 mm</span>
+      </div>
+      <div class="preview-wrap">
+        <svg id="preview" role="img" aria-label="Vista previa de cartel SVG"></svg>
+      </div>
+    </section>
+
+    <section class="output" aria-label="Codigo SVG">
+      <div class="preview-top">
+        <strong>SVG generado</strong>
+        <span>Vinilo A4 sin fondo negro</span>
+      </div>
+      <textarea id="svgCode" spellcheck="false" readonly></textarea>
+    </section>
+  </main>
+
+  <script>
+    const ids = [
+      "titleText", "bodyText", "orientation", "font", "margin", "corner",
+      "border", "headerHeight", "titleScale", "bodyScale", "gap",
+      "uppercase"
+    ];
+    const els = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
+    const svgCode = document.getElementById("svgCode");
+    const sizeLabel = document.getElementById("sizeLabel");
+    const status = document.getElementById("status");
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, Number(value) || min));
+    }
+
+    function escapeXml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function normalize(value) {
+      const text = String(value || "").trim();
+      return els.uppercase.checked ? text.toUpperCase() : text;
+    }
+
+    function getSize() {
+      return els.orientation.value === "portrait"
+        ? { width: 210, height: 297 }
+        : { width: 297, height: 210 };
+    }
+
+    function fitText({ text, x, y, width, height, font, scale, fill }) {
+      const fontSize = Math.max(4, height * scale);
+      const baseline = y + height * .78;
+      const safeText = escapeXml(text);
+      return `  <text x="${x.toFixed(2)}" y="${baseline.toFixed(2)}" textLength="${width.toFixed(2)}" lengthAdjust="spacingAndGlyphs" font-size="${fontSize.toFixed(2)}" style="font-family:${font};font-weight:900;font-style:normal;letter-spacing:0" fill="${fill}">${safeText}</text>`;
+    }
+
+    function buildSvg() {
+      const { width, height } = getSize();
+      const margin = clamp(els.margin.value, 3, 18);
+      const corner = clamp(els.corner.value, 0, 12);
+      const border = clamp(els.border.value, .5, 5);
+      const headerHeight = clamp(els.headerHeight.value, 36, 86);
+      const titleScale = clamp(els.titleScale.value, 62, 94) / 100;
+      const bodyScale = clamp(els.bodyScale.value, 58, 94) / 100;
+      const gap = clamp(els.gap.value, 0, 12);
+      const font = els.font.value;
+      const title = normalize(els.titleText.value) || "VENDO";
+      const bodyLines = normalize(els.bodyText.value)
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+      const lines = bodyLines.length ? bodyLines : ["GOL MOD. 2015", "P/AL DIA 15.000KM", "15-5555-0000"];
+
+      const innerX = margin;
+      const innerY = margin;
+      const innerW = width - margin * 2;
+      const innerH = height - margin * 2;
+      const headerH = Math.min(headerHeight, innerH * .42);
+      const bodyY = innerY + headerH;
+      const bodyH = innerH - headerH;
+      const bodyPadX = Math.max(4, margin * .7);
+      const bodyPadY = Math.max(5, margin * .9);
+      const availableBodyH = Math.max(8, bodyH - bodyPadY * 2 - gap * (lines.length - 1));
+      const lineH = availableBodyH / lines.length;
+
+      const titleMaskText = fitText({
+        text: title,
+        x: innerX + bodyPadX,
+        y: innerY + border * .8,
+        width: innerW - bodyPadX * 2,
+        height: headerH - border * 1.6,
+        font,
+        scale: titleScale,
+        fill: "#000000"
+      }).replace(/^  /, "      ");
+
+      const bodyNodes = lines.map((line, index) => fitText({
+        text: line,
+        x: innerX + bodyPadX,
+        y: bodyY + bodyPadY + index * (lineH + gap),
+        width: innerW - bodyPadX * 2,
+        height: lineH,
+        font,
+        scale: bodyScale,
+        fill: "#ffffff"
+      })).join("\n");
+
+      const headerPath = `M ${innerX + corner} ${innerY} H ${innerX + innerW - corner} Q ${innerX + innerW} ${innerY} ${innerX + innerW} ${innerY + corner} V ${bodyY} H ${innerX} V ${innerY + corner} Q ${innerX} ${innerY} ${innerX + corner} ${innerY} Z`;
+      const borderPath = `M ${innerX + corner} ${innerY} H ${innerX + innerW - corner} Q ${innerX + innerW} ${innerY} ${innerX + innerW} ${innerY + corner} V ${innerY + innerH - corner} Q ${innerX + innerW} ${innerY + innerH} ${innerX + innerW - corner} ${innerY + innerH} H ${innerX + corner} Q ${innerX} ${innerY + innerH} ${innerX} ${innerY + innerH - corner} V ${innerY + corner} Q ${innerX} ${innerY} ${innerX + corner} ${innerY} Z`;
+
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}mm" height="${height}mm" viewBox="0 0 ${width} ${height}">\n<title>Cartel A4 TodoAutos</title>\n  <defs>\n    <mask id="titulo-calado">\n      <rect x="0" y="0" width="${width}" height="${height}" fill="#ffffff"/>\n${titleMaskText}\n    </mask>\n  </defs>\n  <path d="${headerPath}" fill="#ffffff" mask="url(#titulo-calado)"/>\n  <path d="${borderPath}" fill="none" stroke="#ffffff" stroke-width="${border}" stroke-linejoin="round"/>\n  <line x1="${innerX}" y1="${bodyY}" x2="${innerX + innerW}" y2="${bodyY}" stroke="#ffffff" stroke-width="${border}"/>\n${bodyNodes}\n</svg>`;
+    }
+
+    function render() {
+      const svg = buildSvg();
+      const preview = document.getElementById("preview");
+      preview.outerHTML = svg.replace("<svg ", "<svg id=\"preview\" role=\"img\" aria-label=\"Vista previa de cartel SVG\" ");
+      svgCode.value = svg;
+      const { width, height } = getSize();
+      sizeLabel.textContent = `${width} x ${height} mm`;
+      status.textContent = "";
+    }
+
+    function downloadSvg() {
+      const blob = new Blob([svgCode.value], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "cartel-a4-todoautos.svg";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      status.textContent = "SVG descargado.";
+    }
+
+    function downloadPng() {
+      const { width, height } = getSize();
+      const scale = 300 / 25.4;
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(width * scale);
+      canvas.height = Math.round(height * scale);
+      const ctx = canvas.getContext("2d");
+      const image = new Image();
+      const blob = new Blob([svgCode.value], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+
+      image.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        canvas.toBlob((pngBlob) => {
+          if (!pngBlob) {
+            status.textContent = "No se pudo generar el PNG.";
+            return;
+          }
+          const pngUrl = URL.createObjectURL(pngBlob);
+          const link = document.createElement("a");
+          link.href = pngUrl;
+          link.download = "cartel-a4-todoautos.png";
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(pngUrl);
+          status.textContent = "PNG descargado.";
+        }, "image/png");
+      };
+
+      image.onerror = () => {
+        URL.revokeObjectURL(url);
+        status.textContent = "No se pudo generar el PNG.";
+      };
+
+      image.src = url;
+    }
+
+    async function copySvg() {
+      try {
+        await navigator.clipboard.writeText(svgCode.value);
+        status.textContent = "SVG copiado al portapapeles.";
+      } catch {
+        svgCode.focus();
+        svgCode.select();
+        status.textContent = "Seleccione el SVG para copiarlo manualmente.";
+      }
+    }
+
+    ids.forEach((id) => els[id].addEventListener("input", render));
+    document.getElementById("download").addEventListener("click", downloadSvg);
+    document.getElementById("downloadPng").addEventListener("click", downloadPng);
+    document.getElementById("copy").addEventListener("click", copySvg);
+    render();
+  </script>
+</body>
+</html>
