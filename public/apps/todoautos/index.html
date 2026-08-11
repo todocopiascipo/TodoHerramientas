@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Generador Cartel A4 TodoAutos</title>
+  <title>Generador Cartel A4 TodoAutos V 1.1</title>
   <style>
     :root {
       color-scheme: light;
@@ -253,7 +253,7 @@
   <main class="app">
     <header>
       <div>
-        <h1>Cartel SVG A4</h1>
+        <h1>Cartel SVG A4 V 1.1</h1>
         <p>Genera el vinilo A4: borde, encabezado calado y texto relleno, sin fondo negro exportado.</p>
       </div>
       <p class="hint">A4 horizontal: 297 x 210 mm. A4 vertical: 210 x 297 mm.</p>
@@ -339,7 +339,7 @@ P/AL DIA 15.000KM
 
       <div class="actions">
         <button class="primary" id="download" type="button">Descargar SVG</button>
-        <button class="primary" id="downloadPng" type="button">Descargar PNG</button>
+        <button class="primary" id="downloadPng" type="button">Descargar PNG A4</button>
         <button id="copy" type="button">Copiar SVG</button>
       </div>
       <p class="hint" id="status" aria-live="polite"></p>
@@ -485,9 +485,68 @@ P/AL DIA 15.000KM
       status.textContent = "SVG descargado.";
     }
 
+    function makeCrcTable() {
+      const table = new Uint32Array(256);
+      for (let n = 0; n < 256; n += 1) {
+        let c = n;
+        for (let k = 0; k < 8; k += 1) {
+          c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        }
+        table[n] = c >>> 0;
+      }
+      return table;
+    }
+
+    const crcTable = makeCrcTable();
+
+    function crc32(bytes) {
+      let crc = 0xffffffff;
+      for (let index = 0; index < bytes.length; index += 1) {
+        crc = crcTable[(crc ^ bytes[index]) & 0xff] ^ (crc >>> 8);
+      }
+      return (crc ^ 0xffffffff) >>> 0;
+    }
+
+    function writeUint32(bytes, offset, value) {
+      bytes[offset] = (value >>> 24) & 0xff;
+      bytes[offset + 1] = (value >>> 16) & 0xff;
+      bytes[offset + 2] = (value >>> 8) & 0xff;
+      bytes[offset + 3] = value & 0xff;
+    }
+
+    function makePngChunk(type, data) {
+      const typeBytes = new TextEncoder().encode(type);
+      const chunk = new Uint8Array(12 + data.length);
+      writeUint32(chunk, 0, data.length);
+      chunk.set(typeBytes, 4);
+      chunk.set(data, 8);
+      const crcInput = new Uint8Array(typeBytes.length + data.length);
+      crcInput.set(typeBytes, 0);
+      crcInput.set(data, typeBytes.length);
+      writeUint32(chunk, 8 + data.length, crc32(crcInput));
+      return chunk;
+    }
+
+    function addPngDpi(buffer, dpi) {
+      const png = new Uint8Array(buffer);
+      const ppm = Math.round(dpi / 0.0254);
+      const data = new Uint8Array(9);
+      writeUint32(data, 0, ppm);
+      writeUint32(data, 4, ppm);
+      data[8] = 1;
+      const phys = makePngChunk("pHYs", data);
+      const ihdrEnd = 8 + 4 + 4 + 13 + 4;
+      const output = new Uint8Array(png.length + phys.length);
+      output.set(png.slice(0, ihdrEnd), 0);
+      output.set(phys, ihdrEnd);
+      output.set(png.slice(ihdrEnd), ihdrEnd + phys.length);
+      return output;
+    }
+
     function downloadPng() {
       const { width, height } = getSize();
-      const scale = 300 / 25.4;
+      const dpi = 150;
+      const scale = dpi / 25.4;
       const canvas = document.createElement("canvas");
       canvas.width = Math.round(width * scale);
       canvas.height = Math.round(height * scale);
@@ -500,12 +559,15 @@ P/AL DIA 15.000KM
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
         URL.revokeObjectURL(url);
-        canvas.toBlob((pngBlob) => {
+        canvas.toBlob(async (pngBlob) => {
           if (!pngBlob) {
             status.textContent = "No se pudo generar el PNG.";
             return;
           }
-          const pngUrl = URL.createObjectURL(pngBlob);
+          const pngBuffer = await pngBlob.arrayBuffer();
+          const pngWithDpi = addPngDpi(pngBuffer, dpi);
+          const sizedBlob = new Blob([pngWithDpi], { type: "image/png" });
+          const pngUrl = URL.createObjectURL(sizedBlob);
           const link = document.createElement("a");
           link.href = pngUrl;
           link.download = "cartel-a4-todoautos.png";
@@ -513,7 +575,7 @@ P/AL DIA 15.000KM
           link.click();
           link.remove();
           URL.revokeObjectURL(pngUrl);
-          status.textContent = "PNG descargado.";
+          status.textContent = `PNG A4 descargado (${canvas.width} x ${canvas.height} px, ${dpi} DPI).`;
         }, "image/png");
       };
 

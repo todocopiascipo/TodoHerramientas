@@ -8,7 +8,7 @@ Web app local con siete herramientas integradas:
 - AutoFigu: generador de laminas A4 para figuritas, fotos carnet y folletos.
 - Inversor B/N Impresion: herramienta para invertir blanco y negro antes de imprimir.
 - TodoPedidos: armado de pedidos para proveedores con Excel opcional, precios estimados y listas guardadas.
-- TodoAutos: generador de carteles A4 para vinilo rotulado con exportacion SVG/PNG transparente.
+- TodoAutos V 1.1: generador de carteles A4 para vinilo rotulado con exportacion SVG/PNG transparente. El PNG exporta A4 a 150 DPI con metadata fisica para reducir peso.
 
 ## Requisitos
 

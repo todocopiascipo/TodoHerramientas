@@ -786,7 +786,7 @@ const TOOLS = [
   {
     id: 'todoautos',
     path: '/todoautos',
-    title: 'TodoAutos',
+    title: 'TodoAutos V 1.1',
     icon: 'TA',
     description: 'Genera carteles A4 para vinilo rotulado con fondo transparente, encabezado calado y exportacion SVG/PNG.'
   }
@@ -911,7 +911,7 @@ function SuiteApp() {
             className={activeTool === 'todoautos' ? 'active' : ''}
             onClick={() => navigate('/todoautos')}
           >
-            TodoAutos
+            TodoAutos V 1.1
           </button>
         </nav>
       </header>
@@ -953,10 +953,10 @@ function SuiteApp() {
       {activeTool === 'todoautos' && (
         <EmbeddedAppTool
           eyebrow="Herramienta de rotulacion"
-          title="TodoAutos"
+          title="TodoAutos V 1.1"
           subtitle="Carteles A4 para vinilo con fondo transparente, texto calado y exportacion SVG o PNG."
           src="/apps/todoautos/index.html"
-          iframeTitle="TodoAutos"
+          iframeTitle="TodoAutos V 1.1"
           onGoHome={() => navigate('/')}
         />
       )}
