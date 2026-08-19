@@ -5,7 +5,7 @@ Web app local con siete herramientas integradas:
 - Presupuestos: calculadora para fotocopias, impresiones, papeles especiales y anillados.
 - Talonarios: numerador PDF ORIGINAL/COPIA para plantillas limpias.
 - Presets de talonarios: configuraciones reutilizables para trabajos frecuentes.
-- AutoFigu: generador de laminas A4 para figuritas, fotos carnet y folletos.
+- AutoFigu: generador de laminas A4 para figuritas, fotos carnet y folletos. Incluye rotacion de imagen, cantidad automatica en personalizado y opcion para ocultar marcas de corte.
 - Inversor B/N Impresion: herramienta para invertir blanco y negro antes de imprimir.
 - TodoPedidos: armado de pedidos para proveedores con Excel opcional, precios estimados y listas guardadas.
 - TodoAutos V 1.1: generador de carteles A4 para vinilo rotulado con exportacion SVG/PNG transparente. El PNG exporta A4 a 150 DPI con metadata fisica para reducir peso.

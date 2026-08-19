@@ -25,6 +25,7 @@ const SETTINGS = {
     defaultWidth: 40,
     defaultHeight: 40,
     defaultMargin: 5,
+    defaultQuantity: 12,
     borderWidth: 0.15
   },
   folletos: {
@@ -62,7 +63,12 @@ const customOptions = document.querySelector("#customOptions");
 const customWidthInput = document.querySelector("#customWidthInput");
 const customHeightInput = document.querySelector("#customHeightInput");
 const customMarginInput = document.querySelector("#customMarginInput");
+const customQuantityInput = document.querySelector("#customQuantityInput");
+const autoQuantityToggle = document.querySelector("#autoQuantityToggle");
+const autoQuantityOptions = document.querySelector("#autoQuantityOptions");
 const customLayoutInfo = document.querySelector("#customLayoutInfo");
+const imageRotationSelect = document.querySelector("#imageRotationSelect");
+const cutMarksToggle = document.querySelector("#cutMarksToggle");
 const fitOptions = document.querySelector("#fitOptions");
 const fitToggleButton = document.querySelector("#fitToggleButton");
 const fitModeHelp = document.querySelector("#fitModeHelp");
@@ -83,6 +89,8 @@ const cropEditorContext = cropEditorCanvas.getContext("2d");
 let loadedImage = null;
 let loadedFileName = "";
 let sourceDataUrl = "";
+let rotatedImageCanvas = null;
+let rotatedImageDataUrl = "";
 let activeMode = "figuritas";
 let cropFocus = { x: 0.5, y: 0.5 };
 let cropZoom = 1;
@@ -91,6 +99,10 @@ let customSize = {
   height: SETTINGS.personalizado.defaultHeight,
   margin: SETTINGS.personalizado.defaultMargin
 };
+let customQuantity = SETTINGS.personalizado.defaultQuantity;
+let autoCustomQuantity = false;
+let imageRotation = 0;
+let showCutMarks = true;
 let imagePlacementMode = "cover";
 let cropDragState = null;
 
@@ -113,6 +125,10 @@ zoomSlider.addEventListener("input", handleZoomChange);
 [customWidthInput, customHeightInput, customMarginInput].forEach((input) => {
   input.addEventListener("input", handleCustomSizeChange);
 });
+customQuantityInput.addEventListener("input", handleCustomQuantityChange);
+autoQuantityToggle.addEventListener("change", handleAutoQuantityToggle);
+imageRotationSelect.addEventListener("change", handleImageRotationChange);
+cutMarksToggle.addEventListener("change", handleCutMarksToggle);
 
 modeTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -151,6 +167,13 @@ function updateModeUI() {
   const supportsPlacement = modeSupportsPlacementOptions();
   const usesVisualCrop = modeUsesVisualCrop();
   customOptions.hidden = activeMode !== "personalizado";
+  autoQuantityOptions.hidden = !autoCustomQuantity;
+  autoQuantityToggle.checked = autoCustomQuantity;
+  customWidthInput.disabled = autoCustomQuantity;
+  customHeightInput.disabled = autoCustomQuantity;
+  customQuantityInput.value = String(customQuantity);
+  imageRotationSelect.value = String(imageRotation);
+  cutMarksToggle.checked = showCutMarks;
   fitOptions.hidden = !supportsPlacement;
   cropOptions.hidden = !supportsPlacement;
   cropOptionsTitle.textContent = getCropOptionsTitle();
@@ -247,7 +270,7 @@ function getPaperSummary() {
 
   if (activeMode === "personalizado") {
     const layout = calculatePersonalizadoLayout();
-    return `${formatMm(customSize.width)} x ${formatMm(customSize.height)} mm, ${layout.columns} x ${layout.rows}`;
+    return `${formatMm(layout.itemWidth)} x ${formatMm(layout.itemHeight)} mm, ${layout.columns} x ${layout.rows}`;
   }
 
   if (activeMode === "folletos") {
@@ -268,7 +291,7 @@ function getReadyMessage() {
 
   if (activeMode === "personalizado") {
     const layout = calculatePersonalizadoLayout();
-    return `Modo personalizado listo: ${layout.count} copias de ${formatMm(customSize.width)} x ${formatMm(customSize.height)} mm.`;
+    return `Modo personalizado listo: ${layout.count} copias de ${formatMm(layout.itemWidth)} x ${formatMm(layout.itemHeight)} mm.`;
   }
 
   if (activeMode === "folletos") {
@@ -288,6 +311,11 @@ function updateCustomLayoutInfo() {
   }
 
   const layout = calculatePersonalizadoLayout();
+  if (autoCustomQuantity) {
+    customLayoutInfo.textContent = `${layout.count} copias automaticas de ${formatMm(layout.itemWidth)} x ${formatMm(layout.itemHeight)} mm en ${layout.columns} columnas x ${layout.rows} filas.`;
+    return;
+  }
+
   const capped = layout.itemWidth !== customSize.width || layout.itemHeight !== customSize.height;
   customLayoutInfo.textContent = capped
     ? `La medida supera el area imprimible: se ajusta a ${formatMm(layout.itemWidth)} x ${formatMm(layout.itemHeight)} mm.`
@@ -340,6 +368,32 @@ function handleZoomChange(event) {
 function handleCustomSizeChange() {
   customSize = readCustomSize();
   updateModeUI();
+  loadedImage ? drawPreview() : drawEmptyPreview();
+}
+
+function handleCustomQuantityChange() {
+  customQuantity = clamp(Math.round(Number(customQuantityInput.value) || SETTINGS.personalizado.defaultQuantity), 1, 100);
+  customQuantityInput.value = String(customQuantity);
+  updateModeUI();
+  loadedImage ? drawPreview() : drawEmptyPreview();
+}
+
+function handleAutoQuantityToggle(event) {
+  autoCustomQuantity = event.target.checked;
+  updateModeUI();
+  loadedImage ? drawPreview() : drawEmptyPreview();
+}
+
+function handleImageRotationChange(event) {
+  imageRotation = Number(event.target.value) || 0;
+  refreshRotatedImage();
+  cropFocus = { x: 0.5, y: 0.5 };
+  updateModeUI();
+  loadedImage ? drawPreview() : drawEmptyPreview();
+}
+
+function handleCutMarksToggle(event) {
+  showCutMarks = event.target.checked;
   loadedImage ? drawPreview() : drawEmptyPreview();
 }
 
@@ -434,6 +488,7 @@ function loadSelectedImage(dataUrl, file) {
     loadedImage = image;
     loadedFileName = file.name;
     sourceDataUrl = dataUrl;
+    refreshRotatedImage();
     generateButton.disabled = false;
     fileInfo.textContent = `${file.name} - ${image.naturalWidth} x ${image.naturalHeight} px`;
     statusMessage.textContent = activeMode === "figuritas"
@@ -455,10 +510,64 @@ function resetApp() {
   loadedImage = null;
   loadedFileName = "";
   sourceDataUrl = "";
+  rotatedImageCanvas = null;
+  rotatedImageDataUrl = "";
   generateButton.disabled = true;
   fileInfo.textContent = "Todavia no seleccionaste una imagen.";
   drawCropEditor();
   drawEmptyPreview();
+}
+
+function refreshRotatedImage() {
+  rotatedImageCanvas = null;
+  rotatedImageDataUrl = "";
+
+  if (!loadedImage || imageRotation === 0) {
+    return;
+  }
+
+  const angle = (imageRotation * Math.PI) / 180;
+  const swapSides = imageRotation === 90 || imageRotation === 270;
+  const canvas = document.createElement("canvas");
+  canvas.width = swapSides ? loadedImage.naturalHeight : loadedImage.naturalWidth;
+  canvas.height = swapSides ? loadedImage.naturalWidth : loadedImage.naturalHeight;
+  const context = canvas.getContext("2d");
+
+  context.translate(canvas.width / 2, canvas.height / 2);
+  context.rotate(angle);
+  context.drawImage(
+    loadedImage,
+    -loadedImage.naturalWidth / 2,
+    -loadedImage.naturalHeight / 2
+  );
+
+  rotatedImageCanvas = canvas;
+  rotatedImageDataUrl = canvas.toDataURL("image/png");
+}
+
+function getActiveImage() {
+  return rotatedImageCanvas || loadedImage;
+}
+
+function getActiveImageDataUrl() {
+  return rotatedImageDataUrl || sourceDataUrl;
+}
+
+function getImageWidth(image) {
+  return image.naturalWidth || image.width;
+}
+
+function getImageHeight(image) {
+  return image.naturalHeight || image.height;
+}
+
+function getActiveImageAspect() {
+  const image = getActiveImage();
+  if (image) {
+    return getImageWidth(image) / getImageHeight(image);
+  }
+
+  return customSize.width / customSize.height;
 }
 
 function calculateFiguritasLayout(imageWidth, imageHeight) {
@@ -521,18 +630,24 @@ function calculatePersonalizadoLayout() {
   const margin = customSize.margin;
   const availableWidth = Math.max(1, SETTINGS.pageWidth - margin * 2);
   const availableHeight = Math.max(1, SETTINGS.pageHeight - margin * 2);
-  const itemWidth = Math.min(customSize.width, availableWidth);
-  const itemHeight = Math.min(customSize.height, availableHeight);
+  const autoLayout = autoCustomQuantity
+    ? calculateAutoPersonalizadoLayout(availableWidth, availableHeight)
+    : null;
+  const itemWidth = autoLayout ? autoLayout.itemWidth : Math.min(customSize.width, availableWidth);
+  const itemHeight = autoLayout ? autoLayout.itemHeight : Math.min(customSize.height, availableHeight);
   const columns = Math.max(1, Math.floor(availableWidth / itemWidth));
-  const rows = Math.max(1, Math.floor(availableHeight / itemHeight));
-  const gapX = columns > 1 ? (availableWidth - columns * itemWidth) / (columns - 1) : 0;
+  const rows = autoLayout ? autoLayout.rows : Math.max(1, Math.floor(availableHeight / itemHeight));
+  const finalColumns = autoLayout ? autoLayout.columns : columns;
+  const finalCount = autoLayout ? customQuantity : finalColumns * rows;
+  const gapX = finalColumns > 1 ? (availableWidth - finalColumns * itemWidth) / (finalColumns - 1) : 0;
   const gapY = rows > 1 ? (availableHeight - rows * itemHeight) / (rows - 1) : 0;
-  const startX = columns > 1 ? margin : margin + (availableWidth - itemWidth) / 2;
+  const startX = finalColumns > 1 ? margin : margin + (availableWidth - itemWidth) / 2;
   const startY = rows > 1 ? margin : margin + (availableHeight - itemHeight) / 2;
   const items = [];
 
   for (let row = 0; row < rows; row += 1) {
-    for (let col = 0; col < columns; col += 1) {
+    for (let col = 0; col < finalColumns; col += 1) {
+      if (items.length >= finalCount) break;
       items.push({
         x: startX + col * (itemWidth + gapX),
         y: startY + row * (itemHeight + gapY)
@@ -541,9 +656,9 @@ function calculatePersonalizadoLayout() {
   }
 
   return {
-    columns,
+    columns: finalColumns,
     rows,
-    count: columns * rows,
+    count: finalCount,
     gapX,
     gapY,
     itemWidth,
@@ -551,6 +666,35 @@ function calculatePersonalizadoLayout() {
     margin,
     items
   };
+}
+
+function calculateAutoPersonalizadoLayout(availableWidth, availableHeight) {
+  const quantity = clamp(Math.round(customQuantity) || SETTINGS.personalizado.defaultQuantity, 1, 100);
+  const aspect = getActiveImageAspect();
+  let best = null;
+
+  for (let columns = 1; columns <= quantity; columns += 1) {
+    const rows = Math.ceil(quantity / columns);
+    const cellWidth = availableWidth / columns;
+    const cellHeight = availableHeight / rows;
+    let itemWidth = cellWidth;
+    let itemHeight = cellWidth / aspect;
+
+    if (itemHeight > cellHeight) {
+      itemHeight = cellHeight;
+      itemWidth = cellHeight * aspect;
+    }
+
+    const area = itemWidth * itemHeight;
+    const emptySlots = columns * rows - quantity;
+    const score = area - emptySlots * 0.01;
+
+    if (!best || score > best.score) {
+      best = { columns, rows, itemWidth, itemHeight, score };
+    }
+  }
+
+  return best;
 }
 
 function calculateFolletosLayout() {
@@ -598,26 +742,29 @@ function drawEmptyPreview() {
 
   previewContext.save();
   previewContext.scale(PREVIEW_SCALE, PREVIEW_SCALE);
-  previewContext.strokeStyle = "#dce4e0";
-  previewContext.lineWidth = 0.6;
-  previewContext.setLineDash([3, 2]);
 
-  const margin = getCurrentSafeMargin();
-  previewContext.strokeRect(
-    margin,
-    margin,
-    SETTINGS.pageWidth - margin * 2,
-    SETTINGS.pageHeight - margin * 2
-  );
+  if (showCutMarks) {
+    previewContext.strokeStyle = "#dce4e0";
+    previewContext.lineWidth = 0.6;
+    previewContext.setLineDash([3, 2]);
 
-  if (activeMode === "carnet") {
-    drawCarnetPlaceholders();
-  } else if (activeMode === "personalizado") {
-    drawPersonalizadoPlaceholders();
-  } else if (activeMode === "folletos") {
-    drawFolletosPlaceholders();
-  } else if (activeMode === "folletoA5") {
-    drawFolletoA5Placeholders();
+    const margin = getCurrentSafeMargin();
+    previewContext.strokeRect(
+      margin,
+      margin,
+      SETTINGS.pageWidth - margin * 2,
+      SETTINGS.pageHeight - margin * 2
+    );
+
+    if (activeMode === "carnet") {
+      drawCarnetPlaceholders();
+    } else if (activeMode === "personalizado") {
+      drawPersonalizadoPlaceholders();
+    } else if (activeMode === "folletos") {
+      drawFolletosPlaceholders();
+    } else if (activeMode === "folletoA5") {
+      drawFolletoA5Placeholders();
+    }
   }
 
   previewContext.fillStyle = "#8a9690";
@@ -649,14 +796,15 @@ function drawPreview() {
 
 function drawFiguritasPreview() {
   const config = SETTINGS.figuritas;
-  const layout = calculateFiguritasLayout(loadedImage.naturalWidth, loadedImage.naturalHeight);
+  const image = getActiveImage();
+  const layout = calculateFiguritasLayout(getImageWidth(image), getImageHeight(image));
 
   for (let index = 0; index < config.smallCopies; index += 1) {
     const x = layout.small.startX + index * (layout.small.width + config.smallGap);
-    previewContext.drawImage(loadedImage, x, layout.small.y, layout.small.width, layout.small.height);
+    previewContext.drawImage(image, x, layout.small.y, layout.small.width, layout.small.height);
   }
 
-  drawBigImageOnCanvas(previewContext, loadedImage, layout.big);
+  drawBigImageOnCanvas(previewContext, image, layout.big);
 }
 
 function drawCarnetPreview() {
@@ -667,8 +815,10 @@ function drawCarnetPreview() {
     for (let col = 0; col < config.columns; col += 1) {
       const x = layout.startX + col * (config.photoSize + layout.gapX);
       const y = layout.startY + row * (config.photoSize + layout.gapY);
-      drawCroppedSquare(previewContext, loadedImage, x, y, config.photoSize);
-      drawCutBorder(previewContext, x, y, config.photoSize, config.photoSize, config.borderWidth);
+      drawCroppedSquare(previewContext, getActiveImage(), x, y, config.photoSize);
+      if (showCutMarks) {
+        drawCutBorder(previewContext, x, y, config.photoSize, config.photoSize, config.borderWidth);
+      }
     }
   }
 }
@@ -679,13 +829,15 @@ function drawPersonalizadoPreview() {
   layout.items.forEach((item) => {
     drawCroppedImage(
       previewContext,
-      loadedImage,
+      getActiveImage(),
       item.x,
       item.y,
       layout.itemWidth,
       layout.itemHeight
     );
-    drawCutBorder(previewContext, item.x, item.y, layout.itemWidth, layout.itemHeight, SETTINGS.personalizado.borderWidth);
+    if (showCutMarks) {
+      drawCutBorder(previewContext, item.x, item.y, layout.itemWidth, layout.itemHeight, SETTINGS.personalizado.borderWidth);
+    }
   });
 }
 
@@ -693,18 +845,22 @@ function drawFolletosPreview() {
   const config = SETTINGS.folletos;
   const layout = calculateFolletosLayout();
 
-  drawA6Guides(previewContext);
+  if (showCutMarks) {
+    drawA6Guides(previewContext);
+  }
 
   layout.forEach((item) => {
     drawCroppedImage(
       previewContext,
-      loadedImage,
+      getActiveImage(),
       item.imageX,
       item.imageY,
       config.imageWidth,
       config.imageHeight
     );
-    drawCutBorder(previewContext, item.imageX, item.imageY, config.imageWidth, config.imageHeight, config.guideWidth);
+    if (showCutMarks) {
+      drawCutBorder(previewContext, item.imageX, item.imageY, config.imageWidth, config.imageHeight, config.guideWidth);
+    }
   });
 }
 
@@ -712,18 +868,22 @@ function drawFolletoA5Preview() {
   const config = SETTINGS.folletoA5;
   const layout = calculateFolletoA5Layout();
 
-  drawA5Guides(previewContext);
+  if (showCutMarks) {
+    drawA5Guides(previewContext);
+  }
 
   layout.forEach((item) => {
     drawCroppedImage(
       previewContext,
-      loadedImage,
+      getActiveImage(),
       item.imageX,
       item.imageY,
       config.imageWidth,
       config.imageHeight
     );
-    drawCutBorder(previewContext, item.imageX, item.imageY, config.imageWidth, config.imageHeight, config.guideWidth);
+    if (showCutMarks) {
+      drawCutBorder(previewContext, item.imageX, item.imageY, config.imageWidth, config.imageHeight, config.guideWidth);
+    }
   });
 }
 
@@ -760,7 +920,9 @@ function drawFolletosPlaceholders() {
   const config = SETTINGS.folletos;
   const layout = calculateFolletosLayout();
 
-  drawA6Guides(previewContext);
+  if (showCutMarks) {
+    drawA6Guides(previewContext);
+  }
   previewContext.strokeStyle = "#dce4e0";
   previewContext.lineWidth = config.guideWidth;
   previewContext.setLineDash([]);
@@ -774,7 +936,9 @@ function drawFolletoA5Placeholders() {
   const config = SETTINGS.folletoA5;
   const layout = calculateFolletoA5Layout();
 
-  drawA5Guides(previewContext);
+  if (showCutMarks) {
+    drawA5Guides(previewContext);
+  }
   previewContext.strokeStyle = "#dce4e0";
   previewContext.lineWidth = config.guideWidth;
   previewContext.setLineDash([]);
@@ -924,11 +1088,13 @@ function drawCropEditor() {
   }
 
   if (imagePlacementMode === "contain") {
-    const target = getContainBox(loadedImage, 0, 0, cropEditorCanvas.width, cropEditorCanvas.height);
-    cropEditorContext.drawImage(loadedImage, target.x, target.y, target.width, target.height);
+    const image = getActiveImage();
+    const target = getContainBox(image, 0, 0, cropEditorCanvas.width, cropEditorCanvas.height);
+    cropEditorContext.drawImage(image, target.x, target.y, target.width, target.height);
   } else {
+    const image = getActiveImage();
     const metrics = getCropEditorMetrics();
-    cropEditorContext.drawImage(loadedImage, metrics.x, metrics.y, metrics.width, metrics.height);
+    cropEditorContext.drawImage(image, metrics.x, metrics.y, metrics.width, metrics.height);
   }
 
   drawCropEditorOverlay();
@@ -962,7 +1128,8 @@ function drawCropEditorOverlay() {
 function getCropEditorMetrics() {
   const frameWidth = cropEditorCanvas.width;
   const frameHeight = cropEditorCanvas.height;
-  const sourceAspect = loadedImage.naturalWidth / loadedImage.naturalHeight;
+  const image = getActiveImage();
+  const sourceAspect = getImageWidth(image) / getImageHeight(image);
   const frameAspect = frameWidth / frameHeight;
   let width = frameWidth;
   let height = frameHeight;
@@ -997,7 +1164,8 @@ function getActiveCropAspect() {
   }
 
   if (activeMode === "personalizado") {
-    return customSize.width / customSize.height;
+    const layout = calculatePersonalizadoLayout();
+    return layout.itemWidth / layout.itemHeight;
   }
 
   if (activeMode === "folletoA5") {
@@ -1027,8 +1195,8 @@ function getSquareCrop(image) {
 }
 
 function getCoverCrop(image, targetAspect) {
-  const sourceWidth = image.naturalWidth;
-  const sourceHeight = image.naturalHeight;
+  const sourceWidth = getImageWidth(image);
+  const sourceHeight = getImageHeight(image);
   const sourceAspect = sourceWidth / sourceHeight;
   let width = sourceWidth;
   let height = sourceHeight;
@@ -1051,7 +1219,7 @@ function getCoverCrop(image, targetAspect) {
 }
 
 function getContainBox(image, x, y, width, height) {
-  const sourceAspect = image.naturalWidth / image.naturalHeight;
+  const sourceAspect = getImageWidth(image) / getImageHeight(image);
   const targetAspect = width / height;
   let drawWidth = width;
   let drawHeight = height;
@@ -1076,22 +1244,23 @@ function clamp(value, min, max) {
 
 function createBigImageDataUrl() {
   const config = SETTINGS.figuritas;
+  const image = getActiveImage();
 
   if (!config.rotateBigImage) {
-    return sourceDataUrl;
+    return getActiveImageDataUrl();
   }
 
   const rotatedCanvas = document.createElement("canvas");
-  rotatedCanvas.width = loadedImage.naturalHeight;
-  rotatedCanvas.height = loadedImage.naturalWidth;
+  rotatedCanvas.width = getImageHeight(image);
+  rotatedCanvas.height = getImageWidth(image);
   const context = rotatedCanvas.getContext("2d");
 
   context.translate(rotatedCanvas.width / 2, rotatedCanvas.height / 2);
   context.rotate((config.bigImageRotation * Math.PI) / 180);
   context.drawImage(
-    loadedImage,
-    -loadedImage.naturalWidth / 2,
-    -loadedImage.naturalHeight / 2
+    image,
+    -getImageWidth(image) / 2,
+    -getImageHeight(image) / 2
   );
 
   return rotatedCanvas.toDataURL("image/png");
@@ -1103,7 +1272,8 @@ function createCarnetImageDataUrl() {
 }
 
 function createPersonalizadoImageDataUrl() {
-  const aspect = customSize.width / customSize.height;
+  const layout = calculatePersonalizadoLayout();
+  const aspect = layout.itemWidth / layout.itemHeight;
   const outputWidth = 1000;
   const outputHeight = Math.round(outputWidth / aspect);
   return createPreparedImageDataUrl(aspect, outputWidth, outputHeight);
@@ -1132,12 +1302,14 @@ function createPreparedImageDataUrl(targetAspect, outputWidth, outputHeight) {
   context.fillRect(0, 0, outputWidth, outputHeight);
 
   if (imagePlacementMode === "contain") {
-    const target = getContainBox(loadedImage, 0, 0, outputWidth, outputHeight);
-    context.drawImage(loadedImage, target.x, target.y, target.width, target.height);
+    const image = getActiveImage();
+    const target = getContainBox(image, 0, 0, outputWidth, outputHeight);
+    context.drawImage(image, target.x, target.y, target.width, target.height);
   } else {
-    const crop = getCoverCrop(loadedImage, targetAspect);
+    const image = getActiveImage();
+    const crop = getCoverCrop(image, targetAspect);
     context.drawImage(
-      loadedImage,
+      image,
       crop.x,
       crop.y,
       crop.width,
@@ -1183,14 +1355,16 @@ function generatePdf() {
 
 function generateFiguritasPdf() {
   const config = SETTINGS.figuritas;
-  const layout = calculateFiguritasLayout(loadedImage.naturalWidth, loadedImage.naturalHeight);
+  const image = getActiveImage();
+  const activeImageDataUrl = getActiveImageDataUrl();
+  const layout = calculateFiguritasLayout(getImageWidth(image), getImageHeight(image));
   const pdf = createPdf();
-  const imageFormat = sourceDataUrl.startsWith("data:image/png") ? "PNG" : "JPEG";
+  const imageFormat = activeImageDataUrl.startsWith("data:image/png") ? "PNG" : "JPEG";
 
   for (let index = 0; index < config.smallCopies; index += 1) {
     const x = layout.small.startX + index * (layout.small.width + config.smallGap);
     pdf.addImage(
-      sourceDataUrl,
+      activeImageDataUrl,
       imageFormat,
       x,
       layout.small.y,
@@ -1221,15 +1395,19 @@ function generateCarnetPdf() {
   const pdf = createPdf();
   const carnetImage = createCarnetImageDataUrl();
 
-  pdf.setDrawColor(184, 194, 189);
-  pdf.setLineWidth(config.borderWidth);
+  if (showCutMarks) {
+    pdf.setDrawColor(184, 194, 189);
+    pdf.setLineWidth(config.borderWidth);
+  }
 
   for (let row = 0; row < config.rows; row += 1) {
     for (let col = 0; col < config.columns; col += 1) {
       const x = layout.startX + col * (config.photoSize + layout.gapX);
       const y = layout.startY + row * (config.photoSize + layout.gapY);
       pdf.addImage(carnetImage, "JPEG", x, y, config.photoSize, config.photoSize, undefined, "FAST");
-      pdf.rect(x, y, config.photoSize, config.photoSize);
+      if (showCutMarks) {
+        pdf.rect(x, y, config.photoSize, config.photoSize);
+      }
     }
   }
 
@@ -1241,8 +1419,10 @@ function generatePersonalizadoPdf() {
   const pdf = createPdf();
   const customImage = createPersonalizadoImageDataUrl();
 
-  pdf.setDrawColor(184, 194, 189);
-  pdf.setLineWidth(SETTINGS.personalizado.borderWidth);
+  if (showCutMarks) {
+    pdf.setDrawColor(184, 194, 189);
+    pdf.setLineWidth(SETTINGS.personalizado.borderWidth);
+  }
 
   layout.items.forEach((item) => {
     pdf.addImage(
@@ -1255,7 +1435,9 @@ function generatePersonalizadoPdf() {
       undefined,
       "FAST"
     );
-    pdf.rect(item.x, item.y, layout.itemWidth, layout.itemHeight);
+    if (showCutMarks) {
+      pdf.rect(item.x, item.y, layout.itemWidth, layout.itemHeight);
+    }
   });
 
   pdf.save(`AutoFoto-Personalizado-${getCleanFileName("foto")}.pdf`);
@@ -1267,12 +1449,14 @@ function generateFolletosPdf() {
   const pdf = createPdf();
   const folletoImage = createFolletoImageDataUrl();
 
-  pdf.setDrawColor(220, 228, 224);
-  pdf.setLineWidth(config.guideWidth);
-  pdf.setLineDashPattern([2, 2], 0);
-  pdf.line(config.segmentWidth, 0, config.segmentWidth, SETTINGS.pageHeight);
-  pdf.line(0, config.segmentHeight, SETTINGS.pageWidth, config.segmentHeight);
-  pdf.setLineDashPattern([], 0);
+  if (showCutMarks) {
+    pdf.setDrawColor(220, 228, 224);
+    pdf.setLineWidth(config.guideWidth);
+    pdf.setLineDashPattern([2, 2], 0);
+    pdf.line(config.segmentWidth, 0, config.segmentWidth, SETTINGS.pageHeight);
+    pdf.line(0, config.segmentHeight, SETTINGS.pageWidth, config.segmentHeight);
+    pdf.setLineDashPattern([], 0);
+  }
 
   layout.forEach((item) => {
     pdf.addImage(
@@ -1296,11 +1480,13 @@ function generateFolletoA5Pdf() {
   const pdf = createPdf();
   const folletoImage = createFolletoA5ImageDataUrl();
 
-  pdf.setDrawColor(220, 228, 224);
-  pdf.setLineWidth(config.guideWidth);
-  pdf.setLineDashPattern([2, 2], 0);
-  pdf.line(0, config.segmentHeight, SETTINGS.pageWidth, config.segmentHeight);
-  pdf.setLineDashPattern([], 0);
+  if (showCutMarks) {
+    pdf.setDrawColor(220, 228, 224);
+    pdf.setLineWidth(config.guideWidth);
+    pdf.setLineDashPattern([2, 2], 0);
+    pdf.line(0, config.segmentHeight, SETTINGS.pageWidth, config.segmentHeight);
+    pdf.setLineDashPattern([], 0);
+  }
 
   layout.forEach((item) => {
     pdf.addImage(

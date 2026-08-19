@@ -219,12 +219,18 @@ h2 {
   overflow-wrap: anywhere;
 }
 
-.custom-options {
+.custom-options,
+.output-options {
   margin: 0 0 14px;
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: #fbfcfb;
+}
+
+.output-options {
+  display: grid;
+  gap: 10px;
 }
 
 .size-grid {
@@ -251,7 +257,8 @@ h2 {
   color: var(--muted);
 }
 
-.size-grid input {
+.size-grid input,
+.size-grid select {
   width: 86px;
   padding: 8px 9px;
   border: 1px solid var(--line);
@@ -259,6 +266,25 @@ h2 {
   background: var(--surface);
   color: var(--ink);
   font-weight: 800;
+}
+
+.size-grid select {
+  width: 150px;
+}
+
+.check-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.check-option input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
 }
 
 .fit-options {
