@@ -85,6 +85,8 @@ const nextPageButton = document.querySelector("#nextPageButton");
 const cutMarksToggle = document.querySelector("#cutMarksToggle");
 const fitOptions = document.querySelector("#fitOptions");
 const fitToggleButton = document.querySelector("#fitToggleButton");
+const applyFitToAllToggle = document.querySelector("#applyFitToAllToggle");
+let globalPlacementMode = null;
 const fitModeHelp = document.querySelector("#fitModeHelp");
 const cropOptions = document.querySelector("#cropOptions");
 const cropOptionsTitle = document.querySelector("#cropOptionsTitle");
@@ -136,6 +138,12 @@ nextPageButton.addEventListener("click", () => { previewPageIndex += 1; drawPrev
 imageInput.addEventListener("change", handleImageSelection);
 generateButton.addEventListener("click", generatePdf);
 fitToggleButton.addEventListener("click", toggleImagePlacementMode);
+applyFitToAllToggle.addEventListener("change", () => {
+  globalPlacementMode = applyFitToAllToggle.checked ? imagePlacementMode : null;
+  if (applyFitToAllToggle.checked) applyPlacementToAll();
+  updateModeUI();
+  loadedImage ? drawPreview() : drawEmptyPreview();
+});
 uploadZone.addEventListener("dragenter", handleDragEnter);
 uploadZone.addEventListener("dragover", handleDragEnter);
 uploadZone.addEventListener("dragleave", handleDragLeave);
@@ -454,7 +462,7 @@ function readPhoto(file) {
       const image = new Image();
       image.onerror = () => reject(new Error("Imagen inválida"));
       image.onload = () => resolve({ image, name: file.name, dataUrl: reader.result,
-        imageRotation: 0, cropFocus: { x: 0.5, y: 0.5 }, cropZoom: 1, imagePlacementMode: "cover", quantity: 1 });
+        imageRotation: 0, cropFocus: { x: 0.5, y: 0.5 }, cropZoom: 1, imagePlacementMode: globalPlacementMode || "cover", quantity: 1 });
       image.src = reader.result;
     };
     reader.readAsDataURL(file);
@@ -481,8 +489,16 @@ async function processSelectedFiles(fileList) {
   }
 }
 
+function applyPlacementToAll() {
+  saveSelectedPhoto();
+  globalPlacementMode = imagePlacementMode;
+  photos.forEach(photo => { photo.imagePlacementMode = imagePlacementMode; });
+}
+
 function toggleImagePlacementMode() {
   imagePlacementMode = imagePlacementMode === "cover" ? "contain" : "cover";
+  if (applyFitToAllToggle.checked) applyPlacementToAll();
+  else saveSelectedPhoto();
   updateModeUI();
   loadedImage ? drawPreview() : drawEmptyPreview();
 }
