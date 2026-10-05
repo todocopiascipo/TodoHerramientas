@@ -548,3 +548,26 @@ h2 {
     gap: 8px;
   }
 }
+
+.image-list { display: grid; gap: 6px; max-height: 250px; overflow-y: auto; }
+.photo-row { display: flex; gap: 6px; }
+.photo-select { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; padding: 6px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); cursor: pointer; text-align: left; color: var(--ink); }
+.photo-select.is-active { border-color: var(--accent); background: var(--accent-soft); }
+.photo-select img { width: 42px; height: 42px; object-fit: contain; border-radius: 5px; }
+.photo-select span { overflow-wrap: anywhere; font-size: .8rem; }
+.photo-remove { width: 36px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; font-size: 1.3rem; }
+.batch-help { margin: 10px 0 14px; }
+.rotation-control { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .8rem; }
+.rotation-control button { width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--accent-dark); font-size: 1.9rem; cursor: pointer; }
+.rotation-control button:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+.rotation-control button:disabled { opacity: .45; cursor: not-allowed; }
+.rotation-control output { min-width: 36px; text-align: center; }
+.photo-select:focus-visible, .photo-remove:focus-visible, .rotation-control button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.photo-quantity { display: grid; align-content: center; gap: 3px; font-size: .7rem; color: var(--muted); }
+.photo-quantity input { width: 52px; padding: 6px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: var(--surface); }
+.distribution-option { display: grid; gap: 6px; font-size: .85rem; font-weight: 700; }
+.distribution-option select { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; }
+.page-navigation { display: flex; justify-content: center; align-items: center; gap: 16px; margin-bottom: 12px; font-size: .85rem; }
+.page-navigation button { width: 44px; height: 36px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; }
+.page-navigation button:disabled { opacity: .4; cursor: default; }

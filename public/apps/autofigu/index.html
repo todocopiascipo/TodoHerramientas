@@ -39,30 +39,35 @@
 
         <label id="uploadZone" class="upload-zone" for="imageInput">
           <span class="upload-icon">+</span>
-          <strong>Elegir imagen</strong>
-          <span>JPG o PNG, tambien podes arrastrarla aca</span>
-          <input id="imageInput" type="file" accept="image/jpeg,image/png">
+          <strong>Agregar fotos</strong>
+          <span>JPG o PNG. Seleccioná o arrastrá varias fotos.</span>
+          <input id="imageInput" type="file" accept="image/jpeg,image/png" multiple>
         </label>
 
         <div id="fileInfo" class="file-info" aria-live="polite">
           Todavia no seleccionaste una imagen.
         </div>
 
+        <div id="imageList" class="image-list" aria-label="Fotos cargadas"></div>
+        <p class="option-note batch-help">Indicá la cantidad de copias de cada foto. Seleccioná una para ajustar su rotación y recorte.</p>
+
+        <label class="distribution-option" for="distributionSelect">Distribución
+          <select id="distributionSelect">
+            <option value="mixed">Varias fotos en la misma hoja</option>
+            <option value="separate">Una hoja por foto</option>
+          </select>
+        </label>
+        <p id="distributionHelp" class="option-note batch-help"></p>
         <div class="output-options">
           <div class="option-heading">
             <strong>Opciones de salida</strong>
             <span>Ajustes generales para la vista previa y el PDF final.</span>
           </div>
-          <div class="size-grid">
-            <label>
-              Rotar imagen
-              <select id="imageRotationSelect">
-                <option value="0">0 grados</option>
-                <option value="90">90 grados</option>
-                <option value="180">180 grados</option>
-                <option value="270">270 grados</option>
-              </select>
-            </label>
+          <div class="rotation-control" role="group" aria-label="Rotar foto seleccionada">
+            <span>Rotar foto</span>
+            <button id="rotateLeftButton" type="button" title="Girar 90° a la izquierda" aria-label="Girar 90 grados a la izquierda" disabled>↶</button>
+            <output id="rotationValue" aria-live="polite">0°</output>
+            <button id="rotateRightButton" type="button" title="Girar 90° a la derecha" aria-label="Girar 90 grados a la derecha" disabled>↷</button>
           </div>
           <label class="check-option">
             <input id="cutMarksToggle" type="checkbox" checked>
@@ -167,6 +172,11 @@
           <span id="paperSummary" class="paper-size">210 x 297 mm</span>
         </div>
 
+        <div id="pageNavigation" class="page-navigation" hidden>
+          <button id="previousPageButton" type="button" aria-label="Hoja anterior">←</button>
+          <span id="pageCounter" aria-live="polite"></span>
+          <button id="nextPageButton" type="button" aria-label="Hoja siguiente">→</button>
+        </div>
         <div class="paper-frame">
           <canvas id="previewCanvas" aria-label="Vista previa de la composicion A4"></canvas>
         </div>

@@ -67,7 +67,21 @@ const customQuantityInput = document.querySelector("#customQuantityInput");
 const autoQuantityToggle = document.querySelector("#autoQuantityToggle");
 const autoQuantityOptions = document.querySelector("#autoQuantityOptions");
 const customLayoutInfo = document.querySelector("#customLayoutInfo");
-const imageRotationSelect = document.querySelector("#imageRotationSelect");
+const rotateLeftButton = document.querySelector("#rotateLeftButton");
+const rotateRightButton = document.querySelector("#rotateRightButton");
+const rotationValue = document.querySelector("#rotationValue");
+const imageList = document.querySelector("#imageList");
+let photos = [];
+let selectedPhotoIndex = -1;
+let loadingPhotos = false;
+let distributionMode = "mixed";
+let previewPageIndex = 0;
+const distributionSelect = document.querySelector("#distributionSelect");
+const distributionHelp = document.querySelector("#distributionHelp");
+const pageNavigation = document.querySelector("#pageNavigation");
+const pageCounter = document.querySelector("#pageCounter");
+const previousPageButton = document.querySelector("#previousPageButton");
+const nextPageButton = document.querySelector("#nextPageButton");
 const cutMarksToggle = document.querySelector("#cutMarksToggle");
 const fitOptions = document.querySelector("#fitOptions");
 const fitToggleButton = document.querySelector("#fitToggleButton");
@@ -110,6 +124,15 @@ configurePreviewCanvas();
 updateModeUI();
 drawEmptyPreview();
 
+distributionSelect.addEventListener("change", () => {
+  distributionMode = distributionSelect.value;
+  previewPageIndex = 0;
+  renderPhotoList();
+  updateModeUI();
+  loadedImage ? drawPreview() : drawEmptyPreview();
+});
+previousPageButton.addEventListener("click", () => { previewPageIndex -= 1; drawPreview(); });
+nextPageButton.addEventListener("click", () => { previewPageIndex += 1; drawPreview(); });
 imageInput.addEventListener("change", handleImageSelection);
 generateButton.addEventListener("click", generatePdf);
 fitToggleButton.addEventListener("click", toggleImagePlacementMode);
@@ -127,12 +150,14 @@ zoomSlider.addEventListener("input", handleZoomChange);
 });
 customQuantityInput.addEventListener("input", handleCustomQuantityChange);
 autoQuantityToggle.addEventListener("change", handleAutoQuantityToggle);
-imageRotationSelect.addEventListener("change", handleImageRotationChange);
+rotateLeftButton.addEventListener("click", () => rotateImage(-90));
+rotateRightButton.addEventListener("click", () => rotateImage(90));
 cutMarksToggle.addEventListener("change", handleCutMarksToggle);
 
 modeTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     activeMode = tab.dataset.mode;
+    previewPageIndex = 0;
     updateModeUI();
     loadedImage ? drawPreview() : drawEmptyPreview();
   });
@@ -158,6 +183,11 @@ function configurePreviewCanvas() {
 }
 
 function updateModeUI() {
+  distributionHelp.textContent = distributionMode === "separate"
+    ? "Cada foto llena una hoja con las copias del formato elegido."
+    : activeMode === "figuritas"
+      ? "Las copias ocupan primero los tres espacios pequeños y después el grande. La distribución usa las proporciones de la primera foto."
+      : "Las cantidades se distribuyen en orden. Si no entran, se agregan hojas automáticamente.";
   modeTabs.forEach((tab) => {
     const selected = tab.dataset.mode === activeMode;
     tab.classList.toggle("is-active", selected);
@@ -172,7 +202,9 @@ function updateModeUI() {
   customWidthInput.disabled = autoCustomQuantity;
   customHeightInput.disabled = autoCustomQuantity;
   customQuantityInput.value = String(customQuantity);
-  imageRotationSelect.value = String(imageRotation);
+  rotationValue.textContent = `${imageRotation}°`;
+  rotateLeftButton.disabled = rotateRightButton.disabled = !loadedImage;
+  cropButtons.forEach((button) => button.classList.toggle("is-active", Number(button.dataset.focusX) === cropFocus.x && Number(button.dataset.focusY) === cropFocus.y));
   cutMarksToggle.checked = showCutMarks;
   fitOptions.hidden = !supportsPlacement;
   cropOptions.hidden = !supportsPlacement;
@@ -327,29 +359,126 @@ function formatMm(value) {
 }
 
 function handleImageSelection(event) {
-  const [file] = event.target.files;
-  processSelectedFile(file);
+  processSelectedFiles(event.target.files);
+  event.target.value = "";
 }
 
-function processSelectedFile(file) {
-  if (!file) {
-    resetApp();
-    return;
-  }
+function saveSelectedPhoto() {
+  if (selectedPhotoIndex < 0) return;
+  Object.assign(photos[selectedPhotoIndex], {
+    imageRotation, cropFocus: { ...cropFocus }, cropZoom, imagePlacementMode
+  });
+}
 
-  if (!["image/jpeg", "image/png"].includes(file.type)) {
-    resetApp();
-    statusMessage.textContent = "Elegi un archivo JPG o PNG valido.";
-    return;
-  }
+function selectPhoto(index) {
+  saveSelectedPhoto();
+  selectedPhotoIndex = index;
+  const photo = photos[index];
+  loadedImage = photo.image;
+  loadedFileName = photo.name;
+  sourceDataUrl = photo.dataUrl;
+  imageRotation = photo.imageRotation;
+  cropFocus = { ...photo.cropFocus };
+  cropZoom = photo.cropZoom;
+  imagePlacementMode = photo.imagePlacementMode;
+  refreshRotatedImage();
+  fileInfo.textContent = `${index + 1} de ${photos.length}: ${photo.name} - ${photo.image.naturalWidth} x ${photo.image.naturalHeight} px`;
+  generateButton.disabled = loadingPhotos;
+  renderPhotoList();
+  updateModeUI();
+  drawPreview();
+}
 
-  const reader = new FileReader();
-  reader.onload = () => loadSelectedImage(reader.result, file);
-  reader.onerror = () => {
-    resetApp();
-    statusMessage.textContent = "No se pudo leer la imagen.";
-  };
-  reader.readAsDataURL(file);
+function renderPhotoList() {
+  imageList.replaceChildren();
+  photos.forEach((photo, index) => {
+    const row = document.createElement("div");
+    row.className = "photo-row";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "photo-select";
+    button.classList.toggle("is-active", index === selectedPhotoIndex);
+    button.setAttribute("aria-pressed", String(index === selectedPhotoIndex));
+    const thumbnail = document.createElement("img");
+    thumbnail.src = photo.dataUrl;
+    thumbnail.alt = "";
+    const label = document.createElement("span");
+    label.textContent = photo.name;
+    button.append(thumbnail, label);
+    button.addEventListener("click", () => selectPhoto(index));
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "photo-remove";
+    remove.textContent = "×";
+    remove.setAttribute("aria-label", `Quitar ${photo.name}`);
+    remove.addEventListener("click", () => {
+      saveSelectedPhoto();
+      const nextIndex = index < selectedPhotoIndex ? selectedPhotoIndex - 1 : Math.min(selectedPhotoIndex, photos.length - 2);
+      photos.splice(index, 1);
+      selectedPhotoIndex = -1;
+      if (photos.length) selectPhoto(nextIndex);
+      else { resetApp(); renderPhotoList(); updateModeUI(); }
+    });
+    const quantityLabel = document.createElement("label");
+    quantityLabel.className = "photo-quantity";
+    quantityLabel.textContent = "Copias";
+    const quantity = document.createElement("input");
+    quantity.type = "number";
+    quantity.min = "1";
+    quantity.max = "100";
+    quantity.step = "1";
+    quantity.value = String(photo.quantity);
+    quantity.disabled = distributionMode === "separate";
+    quantity.setAttribute("aria-label", `Cantidad de copias de ${photo.name}`);
+    quantity.addEventListener("change", () => {
+      photo.quantity = clamp(Math.round(Number(quantity.value) || 1), 1, 100);
+      quantity.value = String(photo.quantity);
+      updateModeUI();
+      drawPreview();
+    });
+    quantityLabel.append(quantity);
+    row.append(button, quantityLabel, remove);
+    imageList.append(row);
+  });
+}
+
+function readPhoto(file) {
+  return new Promise((resolve, reject) => {
+    if (!["image/jpeg", "image/png"].includes(file.type)) {
+      reject(new Error("Formato no admitido"));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("No se pudo leer"));
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => reject(new Error("Imagen inválida"));
+      image.onload = () => resolve({ image, name: file.name, dataUrl: reader.result,
+        imageRotation: 0, cropFocus: { x: 0.5, y: 0.5 }, cropZoom: 1, imagePlacementMode: "cover", quantity: 1 });
+      image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function processSelectedFiles(fileList) {
+  const files = Array.from(fileList);
+  if (!files.length || loadingPhotos) return;
+  loadingPhotos = true;
+  generateButton.disabled = true;
+  statusMessage.textContent = "Cargando fotos...";
+  let failures = 0;
+  let added = 0;
+  try {
+    for (const file of files) {
+      try { photos.push(await readPhoto(file)); added += 1; }
+      catch { failures += 1; }
+    }
+  } finally {
+    loadingPhotos = false;
+    if (photos.length) selectPhoto(selectedPhotoIndex < 0 ? 0 : selectedPhotoIndex);
+    statusMessage.textContent = `${added} foto(s) agregada(s).${failures ? ` ${failures} archivo(s) no se pudieron cargar; usá JPG o PNG válidos.` : ""}`;
+  }
 }
 
 function toggleImagePlacementMode() {
@@ -384,8 +513,9 @@ function handleAutoQuantityToggle(event) {
   loadedImage ? drawPreview() : drawEmptyPreview();
 }
 
-function handleImageRotationChange(event) {
-  imageRotation = Number(event.target.value) || 0;
+function rotateImage(delta) {
+  if (!loadedImage) return;
+  imageRotation = (imageRotation + delta + 360) % 360;
   refreshRotatedImage();
   cropFocus = { x: 0.5, y: 0.5 };
   updateModeUI();
@@ -422,8 +552,7 @@ function handleDrop(event) {
   event.preventDefault();
   uploadZone.classList.remove("is-dragging");
 
-  const [file] = event.dataTransfer.files;
-  processSelectedFile(file);
+  processSelectedFiles(event.dataTransfer.files);
 }
 
 function handleCropEditorPointerDown(event) {
@@ -479,31 +608,6 @@ function handleCropEditorPointerUp(event) {
   cropEditorCanvas.releasePointerCapture(event.pointerId);
   cropEditor.classList.remove("is-dragging");
   cropDragState = null;
-}
-
-function loadSelectedImage(dataUrl, file) {
-  const image = new Image();
-
-  image.onload = () => {
-    loadedImage = image;
-    loadedFileName = file.name;
-    sourceDataUrl = dataUrl;
-    refreshRotatedImage();
-    generateButton.disabled = false;
-    fileInfo.textContent = `${file.name} - ${image.naturalWidth} x ${image.naturalHeight} px`;
-    statusMessage.textContent = activeMode === "figuritas"
-      ? "Imagen lista para generar."
-      : "Imagen lista. Ajusta el recorte si hace falta.";
-    drawCropEditor();
-    drawPreview();
-  };
-
-  image.onerror = () => {
-    resetApp();
-    statusMessage.textContent = "El archivo seleccionado no parece ser una imagen valida.";
-  };
-
-  image.src = dataUrl;
 }
 
 function resetApp() {
@@ -670,7 +774,9 @@ function calculatePersonalizadoLayout() {
 
 function calculateAutoPersonalizadoLayout(availableWidth, availableHeight) {
   const quantity = clamp(Math.round(customQuantity) || SETTINGS.personalizado.defaultQuantity, 1, 100);
-  const aspect = getActiveImageAspect();
+  const aspect = distributionMode === "mixed" && photos.length && selectedPhotoIndex !== 0
+    ? withPhoto(photos[0], () => getActiveImageAspect())
+    : getActiveImageAspect();
   let best = null;
 
   for (let columns = 1; columns <= quantity; columns += 1) {
@@ -738,6 +844,7 @@ function calculateFolletoA5Layout() {
 }
 
 function drawEmptyPreview() {
+  pageNavigation.hidden = true;
   paintPaper();
 
   previewContext.save();
@@ -775,6 +882,11 @@ function drawEmptyPreview() {
 }
 
 function drawPreview() {
+  if (distributionMode === "mixed") {
+    drawMixedPreview();
+    return;
+  }
+  pageNavigation.hidden = true;
   paintPaper();
   previewContext.save();
   previewContext.scale(PREVIEW_SCALE, PREVIEW_SCALE);
@@ -1324,27 +1436,158 @@ function createPreparedImageDataUrl(targetAspect, outputWidth, outputHeight) {
   return canvas.toDataURL("image/jpeg", 0.95);
 }
 
-function generatePdf() {
-  if (!loadedImage) {
-    return;
+// Switch image state without changing the selection or rebuilding the controls.
+function withPhoto(photo, callback) {
+  const previous = { loadedImage, loadedFileName, sourceDataUrl, imageRotation,
+    cropFocus, cropZoom, imagePlacementMode, rotatedImageCanvas, rotatedImageDataUrl };
+  loadedImage = photo.image;
+  loadedFileName = photo.name;
+  sourceDataUrl = photo.dataUrl;
+  imageRotation = photo.imageRotation;
+  cropFocus = { ...photo.cropFocus };
+  cropZoom = photo.cropZoom;
+  imagePlacementMode = photo.imagePlacementMode;
+  refreshRotatedImage();
+  try { return callback(); }
+  finally {
+    ({ loadedImage, loadedFileName, sourceDataUrl, imageRotation, cropFocus,
+      cropZoom, imagePlacementMode, rotatedImageCanvas, rotatedImageDataUrl } = previous);
   }
+}
 
+function getMixedSlots() {
+  if (activeMode === "personalizado") {
+    const layout = calculatePersonalizadoLayout();
+    return layout.items.map(item => ({ ...item, width: layout.itemWidth, height: layout.itemHeight }));
+  }
+  if (activeMode === "carnet") {
+    const config = SETTINGS.carnet;
+    const layout = calculateCarnetLayout();
+    return Array.from({ length: config.columns * config.rows }, (_, index) => ({
+      x: layout.startX + (index % config.columns) * (config.photoSize + layout.gapX),
+      y: layout.startY + Math.floor(index / config.columns) * (config.photoSize + layout.gapY),
+      width: config.photoSize, height: config.photoSize
+    }));
+  }
+  if (activeMode === "folletos" || activeMode === "folletoA5") {
+    const config = SETTINGS[activeMode];
+    const layout = activeMode === "folletos" ? calculateFolletosLayout() : calculateFolletoA5Layout();
+    return layout.map(item => ({ x: item.imageX, y: item.imageY, width: config.imageWidth, height: config.imageHeight }));
+  }
+  return withPhoto(photos[0], () => {
+    const image = getActiveImage();
+    const config = SETTINGS.figuritas;
+    const layout = calculateFiguritasLayout(getImageWidth(image), getImageHeight(image));
+    const slots = Array.from({ length: config.smallCopies }, (_, index) => ({
+      x: layout.small.startX + index * (layout.small.width + config.smallGap),
+      y: layout.small.y, width: layout.small.width, height: layout.small.height
+    }));
+    slots.push({ ...layout.big, big: config.rotateBigImage });
+    return slots;
+  });
+}
+
+function getMixedPages() {
+  saveSelectedPhoto();
+  if (!photos.length) return [];
+  const slots = getMixedSlots();
+  const copies = photos.flatMap(photo => Array.from({ length: photo.quantity }, () => photo));
+  const pages = [];
+  for (let index = 0; index < copies.length; index += slots.length) {
+    pages.push(copies.slice(index, index + slots.length).map((photo, slotIndex) => ({ photo, slot: slots[slotIndex] })));
+  }
+  return pages;
+}
+
+function getMixedImageDataUrl(slot) {
+  // Figuritas keeps each image complete, including in the rotated large space.
+  if (activeMode === "figuritas") {
+    imagePlacementMode = "contain";
+    if (slot.big) {
+      imageRotation = (imageRotation + SETTINGS.figuritas.bigImageRotation) % 360;
+      refreshRotatedImage();
+    }
+  }
+  const width = 1200;
+  return createPreparedImageDataUrl(slot.width / slot.height, width, Math.max(1, Math.round(width * slot.height / slot.width)));
+}
+
+function getMixedBorderWidth() {
+  return SETTINGS[activeMode].borderWidth || SETTINGS[activeMode].guideWidth || 0.15;
+}
+
+function drawMixedPreview() {
+  const pages = getMixedPages();
+  if (!pages.length) { drawEmptyPreview(); return; }
+  previewPageIndex = clamp(previewPageIndex, 0, pages.length - 1);
+  pageNavigation.hidden = false;
+  pageCounter.textContent = `Hoja ${previewPageIndex + 1} de ${pages.length}`;
+  previousPageButton.disabled = previewPageIndex === 0;
+  nextPageButton.disabled = previewPageIndex === pages.length - 1;
+  paintPaper();
+  previewContext.save();
+  previewContext.scale(PREVIEW_SCALE, PREVIEW_SCALE);
+  if (showCutMarks && activeMode === "folletos") drawA6Guides(previewContext);
+  if (showCutMarks && activeMode === "folletoA5") drawA5Guides(previewContext);
+  pages[previewPageIndex].forEach(({ photo, slot }) => withPhoto(photo, () => {
+    if (activeMode === "figuritas") {
+      imagePlacementMode = "contain";
+      if (slot.big) {
+        imageRotation = (imageRotation + SETTINGS.figuritas.bigImageRotation) % 360;
+        refreshRotatedImage();
+      }
+    }
+    drawImageInBox(previewContext, getActiveImage(), slot.x, slot.y, slot.width, slot.height);
+    if (showCutMarks) drawCutBorder(previewContext, slot.x, slot.y, slot.width, slot.height, getMixedBorderWidth());
+  }));
+  previewContext.restore();
+}
+
+function addMixedPage(pdf, items) {
+  if (showCutMarks) {
+    pdf.setDrawColor(184, 194, 189);
+    pdf.setLineWidth(getMixedBorderWidth());
+    if (activeMode === "folletos" || activeMode === "folletoA5") {
+      const config = SETTINGS[activeMode];
+      pdf.setLineDashPattern([2, 2], 0);
+      if (activeMode === "folletos") pdf.line(config.segmentWidth, 0, config.segmentWidth, SETTINGS.pageHeight);
+      pdf.line(0, config.segmentHeight, SETTINGS.pageWidth, config.segmentHeight);
+      pdf.setLineDashPattern([], 0);
+    }
+  }
+  items.forEach(({photo, slot}) => {
+    const dataUrl = withPhoto(photo, () => getMixedImageDataUrl(slot));
+    pdf.addImage(dataUrl, "JPEG", slot.x, slot.y, slot.width, slot.height, undefined, "FAST");
+    if (showCutMarks) pdf.rect(slot.x, slot.y, slot.width, slot.height);
+  });
+}
+
+function generatePdf() {
+  if (!loadedImage || loadingPhotos) return;
+  saveSelectedPhoto();
   generateButton.disabled = true;
   statusMessage.textContent = "Generando PDF...";
-
   try {
-    if (activeMode === "carnet") {
-      generateCarnetPdf();
-    } else if (activeMode === "personalizado") {
-      generatePersonalizadoPdf();
-    } else if (activeMode === "folletos") {
-      generateFolletosPdf();
-    } else if (activeMode === "folletoA5") {
-      generateFolletoA5Pdf();
+    const pdf = createPdf();
+    let pageCount;
+    if (distributionMode === "mixed") {
+      const pages = getMixedPages();
+      pageCount = pages.length;
+      pages.forEach((items, index) => {
+        if (index) pdf.addPage();
+        addMixedPage(pdf, items);
+      });
     } else {
-      generateFiguritasPdf();
+      pageCount = photos.length;
+      const renderPage = { figuritas: generateFiguritasPdf, carnet: generateCarnetPdf,
+        personalizado: generatePersonalizadoPdf, folletos: generateFolletosPdf, folletoA5: generateFolletoA5Pdf }[activeMode];
+      photos.forEach((photo, index) => {
+        if (index) pdf.addPage();
+        withPhoto(photo, () => renderPage(pdf));
+      });
     }
-    statusMessage.textContent = "PDF generado y descargado.";
+    pdf.save(`AutoFoto-${activeMode}-${photos.length > 1 ? photos.length + "-fotos" : getCleanFileName("foto")}.pdf`);
+    statusMessage.textContent = `PDF generado: ${pageCount} hoja(s).`;
   } catch (error) {
     console.error(error);
     statusMessage.textContent = "No se pudo generar el PDF. Proba con otra imagen.";
@@ -1353,12 +1596,11 @@ function generatePdf() {
   }
 }
 
-function generateFiguritasPdf() {
+function generateFiguritasPdf(pdf) {
   const config = SETTINGS.figuritas;
   const image = getActiveImage();
   const activeImageDataUrl = getActiveImageDataUrl();
   const layout = calculateFiguritasLayout(getImageWidth(image), getImageHeight(image));
-  const pdf = createPdf();
   const imageFormat = activeImageDataUrl.startsWith("data:image/png") ? "PNG" : "JPEG";
 
   for (let index = 0; index < config.smallCopies; index += 1) {
@@ -1386,13 +1628,11 @@ function generateFiguritasPdf() {
     "FAST"
   );
 
-  pdf.save(`AutoFoto-${getCleanFileName("lamina")}.pdf`);
 }
 
-function generateCarnetPdf() {
+function generateCarnetPdf(pdf) {
   const config = SETTINGS.carnet;
   const layout = calculateCarnetLayout();
-  const pdf = createPdf();
   const carnetImage = createCarnetImageDataUrl();
 
   if (showCutMarks) {
@@ -1411,12 +1651,10 @@ function generateCarnetPdf() {
     }
   }
 
-  pdf.save(`AutoFoto-FotoCarnet-${getCleanFileName("foto")}.pdf`);
 }
 
-function generatePersonalizadoPdf() {
+function generatePersonalizadoPdf(pdf) {
   const layout = calculatePersonalizadoLayout();
-  const pdf = createPdf();
   const customImage = createPersonalizadoImageDataUrl();
 
   if (showCutMarks) {
@@ -1440,13 +1678,11 @@ function generatePersonalizadoPdf() {
     }
   });
 
-  pdf.save(`AutoFoto-Personalizado-${getCleanFileName("foto")}.pdf`);
 }
 
-function generateFolletosPdf() {
+function generateFolletosPdf(pdf) {
   const config = SETTINGS.folletos;
   const layout = calculateFolletosLayout();
-  const pdf = createPdf();
   const folletoImage = createFolletoImageDataUrl();
 
   if (showCutMarks) {
@@ -1471,13 +1707,11 @@ function generateFolletosPdf() {
     );
   });
 
-  pdf.save(`AutoFoto-FolletosA6-${getCleanFileName("folleto")}.pdf`);
 }
 
-function generateFolletoA5Pdf() {
+function generateFolletoA5Pdf(pdf) {
   const config = SETTINGS.folletoA5;
   const layout = calculateFolletoA5Layout();
-  const pdf = createPdf();
   const folletoImage = createFolletoA5ImageDataUrl();
 
   if (showCutMarks) {
@@ -1501,7 +1735,6 @@ function generateFolletoA5Pdf() {
     );
   });
 
-  pdf.save(`AutoFoto-FolletoA5-${getCleanFileName("folleto")}.pdf`);
 }
 
 function createPdf() {
