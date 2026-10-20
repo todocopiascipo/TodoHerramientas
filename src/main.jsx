@@ -5,6 +5,7 @@ import fontkit from '@pdf-lib/fontkit';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 import './styles.css';
+import TarjetasTool from './tarjetas/TarjetasTool.jsx';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
@@ -770,6 +771,13 @@ const TOOLS = [
     description: 'Abri la aplicacion AutoFigu integrada en esta suite local, conservada como herramienta independiente.'
   },
   {
+    id: 'tarjetas',
+    path: '/tarjetas',
+    title: 'TARJETAS',
+    icon: 'TJ',
+    description: 'Armá hojas A4 con 10 tarjetas de 90 × 50 mm. Simple o doble faz, demasía y marcas de corte.'
+  },
+  {
     id: 'inversor-bn-impresion',
     path: '/inversor-bn-impresion',
     title: 'Inversor B/N Impresion',
@@ -840,6 +848,8 @@ function SuiteApp() {
         ? 'presets'
         : path === '/autofigu'
           ? 'autofigu'
+          : path === '/tarjetas'
+            ? 'tarjetas'
           : path === '/inversor-bn-impresion'
             ? 'inversor-bn-impresion'
             : path === '/todopedidos'
@@ -854,7 +864,7 @@ function SuiteApp() {
         <div>
           <p className="eyebrow">Todo Copias</p>
           <h1>Suite de herramientas</h1>
-          <p className="tool-subtitle">Presupuestos, talonarios y presets en una sola webapp local.</p>
+          <p className="tool-subtitle">Diseño, impresión y gestión para Todo Copias.</p>
         </div>
         <nav className="suite-tabs" aria-label="Herramientas Todo Copias">
           <button
@@ -894,6 +904,13 @@ function SuiteApp() {
           </button>
           <button
             type="button"
+            className={activeTool === 'tarjetas' ? 'active' : ''}
+            onClick={() => navigate('/tarjetas')}
+          >
+            TARJETAS
+          </button>
+          <button
+            type="button"
             className={activeTool === 'inversor-bn-impresion' ? 'active' : ''}
             onClick={() => navigate('/inversor-bn-impresion')}
           >
@@ -920,6 +937,7 @@ function SuiteApp() {
       {activeTool === 'presupuestos' && <PresupuestosTool onGoHome={() => navigate('/')} />}
       {activeTool === 'talonarios' && <TalonariosTool onGoHome={() => navigate('/')} />}
       {activeTool === 'presets' && <TalonariosTool mode="presets" onGoHome={() => navigate('/')} />}
+      {activeTool === 'tarjetas' && <TarjetasTool onGoHome={() => navigate('/')} />}
       {activeTool === 'autofigu' && (
         <EmbeddedAppTool
           eyebrow="Herramienta de armado"
