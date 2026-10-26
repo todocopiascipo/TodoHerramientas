@@ -32,11 +32,11 @@ http://127.0.0.1:5173
 ## Flujo
 
 1. Elegir una herramienta desde Inicio (con buscador) o desde el menú lateral. El tema claro/oscuro se elige abajo en el menú.
-2. En Talonarios, cargar un PDF limpio sin numeracion ni textos ORIGINAL/COPIA.
-3. Ubicar visualmente los marcadores de ORIGINAL/COPIA y numeracion sobre la primera pagina.
-4. Ajustar textos, rango, digitos, fuentes, colores y alineacion.
-5. Usar "Vista previa rapida" para validar una muestra.
-6. Usar "Generar PDF final" para descargar el PDF terminado.
+2. Talonarios funciona en cuatro pasos:
+   1. **PDF y preset**: cargar (o arrastrar) un PDF limpio sin numeración ni textos ORIGINAL/COPIA. Opcionalmente aplicar un preset guardado, o importar/exportar presets en un archivo .json.
+   2. **Numeración**: rango, texto previo, prefijo, dígitos y textos de ORIGINAL/COPIA. Los errores se marcan en el campo.
+   3. **Ubicar y estilo**: hacer clic en el PDF, arrastrar el marcador o moverlo con las flechas (Shift = 10 pt). Fuente, tamaño, color y alineación de cada campo.
+   4. **Revisar y generar**: resumen, avisos, vista previa real, generar el PDF y guardar la configuración como preset.
 
 Todo se procesa en el navegador. La app no sube archivos a internet ni requiere backend.
 

@@ -92,6 +92,8 @@
 /* ---------- Base ---------- */
 * { box-sizing: border-box; }
 
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   min-width: 320px;
@@ -820,10 +822,12 @@ canvas {
 }
 
 /* ---------- Responsive ---------- */
-@media (max-width: 1080px) {
+@media (max-width: 1180px) {
+  .workspace { grid-template-columns: minmax(290px, 340px) minmax(0, 1fr); gap: 16px; }
+}
+
+@media (max-width: 900px) {
   .workspace { grid-template-columns: 1fr; }
-  .control-panel { order: 2; }
-  .viewer-panel { order: 1; }
 }
 
 @media (max-width: 900px) {
