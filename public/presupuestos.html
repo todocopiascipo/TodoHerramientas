@@ -931,12 +931,6 @@
       font-size: 0.82rem;
     }
 
-    .pdf-options {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 10px 14px;
-    }
 
     .faz-switch {
       display: inline-grid;
@@ -964,12 +958,6 @@
       background: linear-gradient(135deg, var(--brand-a), var(--brand-b));
     }
 
-    .pdf-options select {
-      min-height: 46px;
-      width: auto;
-      flex: 1;
-      min-width: 210px;
-    }
 
     .pdf-result {
       display: grid;
@@ -1033,6 +1021,87 @@
       height: 8px;
       accent-color: var(--brand-a);
     }
+
+    .pdf-jobs {
+      display: grid;
+      gap: 10px;
+    }
+
+    .pdf-job {
+      display: grid;
+      gap: 12px;
+      padding: 14px 16px;
+      border: 1px solid rgba(30, 97, 168, 0.3);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    .pdf-job-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pdf-job-head strong {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .pdf-job-head small {
+      color: var(--muted);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .pdf-job-head .btn-delete {
+      width: 36px;
+      min-height: 36px;
+    }
+
+    .pdf-job-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) auto minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+    }
+
+    .pdf-job-grid select,
+    .pdf-job-grid input {
+      min-height: 46px;
+    }
+
+    .pdf-job-grid input {
+      margin-top: 6px;
+    }
+
+    .pdf-job-error {
+      color: #b42318;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .pdf-job-result {
+      margin: 0;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      background: rgba(30, 97, 168, 0.07);
+      color: var(--brand-b);
+      font-weight: 800;
+    }
+
+    .pdf-job-result.is-error {
+      background: #fff0f1;
+      color: #b42318;
+    }
+
+    @media (max-width: 640px) {
+      .pdf-job-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
   <script src="/apps/suite-embed.js"></script>
   <link rel="stylesheet" href="/apps/suite-theme.css">
@@ -1062,19 +1131,9 @@
             <label class="pdf-drop" id="pdfDrop">
               <input id="pdfInput" type="file" accept="application/pdf,.pdf" multiple aria-label="Elegir PDF para presupuestar">
               <strong>Soltá un PDF acá o hacé clic para elegirlo</strong>
-              <span>Cuenta las páginas y detecta tamaño (A4 / A3) y color. Podés cargar varios archivos.</span>
+              <span>Se cuentan las páginas. Cómo se imprime (tipo, faz y páginas) lo elegís vos. Podés cargar varios archivos.</span>
             </label>
-            <div class="pdf-options">
-              <div class="faz-switch" role="radiogroup" aria-label="Tipo de impresión">
-                <button type="button" role="radio" aria-checked="true" data-faz="simple">Simple faz</button>
-                <button type="button" role="radio" aria-checked="false" data-faz="doble">Doble faz</button>
-              </div>
-              <select id="colorMode" aria-label="Color de las páginas">
-                <option value="auto">Detectar color automáticamente</option>
-                <option value="bw">Todo en blanco y negro</option>
-                <option value="color">Todo en color</option>
-              </select>
-            </div>
+            <div class="pdf-jobs" id="pdfJobs"></div>
             <div class="pdf-result" id="pdfResult" hidden></div>
           </section>
 
@@ -1193,10 +1252,11 @@
       bindings: [],
       nextBindingId: 1,
       discountMode: "amount",
-      duplex: false,
-      colorMode: "auto",
       pdfFiles: [],
-      pdfBusy: false
+      pdfBusy: false,
+      nextPdfId: 1,
+      pdfApplied: new Set(),
+      duplexKeys: new Set()
     };
 
     const moneyFormatter = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 });
@@ -1427,7 +1487,7 @@
 
       const text = [];
       lines.filter((line) => line.quantity > 0).forEach((line) => {
-        const faz = state.duplex && (line.type.id === "bw" || line.type.id === "color") ? " doble faz" : "";
+        const faz = state.duplexKeys.has(`${line.size}-${line.type.id}`) ? " doble faz" : "";
         const unit = line.quantity === 1 ? "hoja" : "hojas";
         text.push(`${line.quantity} ${unit} ${line.size} ${line.type.label}${faz} (${formatMoney(line.price)} c/u): ${formatMoney(line.total)}`);
       });
@@ -1478,7 +1538,7 @@
 
     function snapshot() {
       return {
-        duplex: state.duplex,
+        duplexKeys: [...state.duplexKeys],
         quantities: Object.fromEntries(getLines().map((line) => [`${line.size}-${line.type.id}`, line.row.querySelector("[data-qty]").value])),
         bindings: state.bindings.map(({ type, quantity }) => ({ type, quantity })),
         discountAmount: $("#discountAmount").value
@@ -1541,7 +1601,10 @@
       state.discountMode = "amount";
       state.bindings = [];
       state.pdfFiles = [];
+      state.pdfApplied = new Set();
+      state.duplexKeys = new Set();
       renderBindings();
+      renderPdfJobs();
       renderPdfResult();
     }
 
@@ -1553,7 +1616,7 @@
       });
       state.bindings = (entry.bindings || []).map((binding) => ({ ...binding, id: state.nextBindingId++ }));
       $("#discountAmount").value = entry.discountAmount || "";
-      setDuplex(Boolean(entry.duplex), { recompute: false });
+      state.duplexKeys = new Set(entry.duplexKeys || []);
       if (Object.entries(entry.quantities || {}).some(([key, value]) => key.startsWith("A3") && toNumber(value) > 0)) {
         $("#sizeA3").open = true;
       }
@@ -1564,78 +1627,116 @@
     }
 
     // ---------- Presupuesto desde PDF ----------
+    // Cada PDF cargado es un "trabajo": se elige cómo imprimirlo y sus hojas se suman a esa línea.
     const Pdf = window.PresupuestoPdf;
+    const TARGETS = Object.keys(SIZES).flatMap((size) => PRINT_TYPES.map((type) => ({ value: `${size}-${type.id}`, label: `${size} ${type.label}` })));
 
-    function allPages() {
-      return state.pdfFiles.flatMap((item) => item.pages);
+    function targetLabel(value) {
+      const target = TARGETS.find((item) => item.value === value);
+      return target ? target.label : value;
     }
 
-    function currentSheets() {
-      return Pdf.computeSheets(allPages(), { duplex: state.duplex, colorMode: state.colorMode });
+    function jobPages(job) {
+      if (job.pagesMode !== "custom") return { count: job.pageCount, error: null };
+      const { pages, error } = Pdf.parsePageSelection(job.pagesText, job.pageCount);
+      return { count: pages.length, error };
     }
 
-    // Vuelca las hojas calculadas en las cantidades de B/N y color (A4 y A3).
-    function applyPdfSheets() {
-      if (!state.pdfFiles.length) return;
-      const sheets = currentSheets();
-      ["A4", "A3"].forEach((size) => {
-        ["bw", "color"].forEach((type) => {
-          $(`#qty-${size}-${type}`).value = sheets[size][type] || "";
-        });
+    function jobSheets(job) {
+      const { count, error } = jobPages(job);
+      return { pages: count, sheets: error ? 0 : Pdf.sheetsFor(count, job.duplex), error };
+    }
+
+    function renderPdfJobs() {
+      $("#pdfJobs").innerHTML = state.pdfFiles.map((job) => `
+        <div class="pdf-job" data-job-id="${job.id}">
+          <div class="pdf-job-head">
+            <strong title="${escapeHtml(job.name)}">${escapeHtml(job.name)}</strong>
+            <small>${job.pageCount} ${job.pageCount === 1 ? "página" : "páginas"}</small>
+            <button class="btn btn-delete" type="button" data-job-remove aria-label="Quitar ${escapeHtml(job.name)}">×</button>
+          </div>
+          <div class="pdf-job-grid">
+            <div class="field">
+              <label for="jobTarget${job.id}">Imprimir como</label>
+              <select id="jobTarget${job.id}" data-job-field="target">
+                ${TARGETS.map((target) => `<option value="${target.value}" ${target.value === job.target ? "selected" : ""}>${target.label}</option>`).join("")}
+              </select>
+            </div>
+            <div class="field">
+              <label>Faz</label>
+              <div class="faz-switch" role="radiogroup" aria-label="Faz de ${escapeHtml(job.name)}">
+                <button type="button" role="radio" aria-checked="${!job.duplex}" data-job-faz="simple">Simple</button>
+                <button type="button" role="radio" aria-checked="${job.duplex}" data-job-faz="doble">Doble</button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="jobPages${job.id}">Páginas</label>
+              <select id="jobPages${job.id}" data-job-field="pagesMode">
+                <option value="all" ${job.pagesMode === "all" ? "selected" : ""}>Todas (${job.pageCount})</option>
+                <option value="custom" ${job.pagesMode === "custom" ? "selected" : ""}>Elegir páginas…</option>
+              </select>
+              <input data-job-field="pagesText" type="text" inputmode="numeric" autocomplete="off" placeholder="Ej.: 1-5, 8, 10-12"
+                aria-label="Páginas a imprimir de ${escapeHtml(job.name)}" value="${escapeHtml(job.pagesText)}" ${job.pagesMode === "custom" ? "" : "hidden"}>
+              <span class="pdf-job-error" data-job-error></span>
+            </div>
+          </div>
+          <p class="pdf-job-result" data-job-result></p>
+        </div>
+      `).join("");
+    }
+
+    // Recalcula las hojas de cada PDF y las vuelca en las cantidades de la línea elegida.
+    function applyPdfJobs() {
+      state.pdfApplied.forEach((key) => { const input = $(`#qty-${key}`); if (input) input.value = ""; });
+      const totals = {};
+      const duplexKeys = new Set();
+      state.pdfFiles.forEach((job) => {
+        const result = jobSheets(job);
+        totals[job.target] = (totals[job.target] || 0) + result.sheets;
+        if (job.duplex && result.sheets > 0) duplexKeys.add(job.target);
+
+        const card = document.querySelector(`[data-job-id="${job.id}"]`);
+        if (!card) return;
+        card.querySelector("[data-job-error]").textContent = result.error || "";
+        const line = card.querySelector("[data-job-result]");
+        line.classList.toggle("is-error", Boolean(result.error));
+        line.textContent = result.error
+          ? "Corregí las páginas para calcular"
+          : `${result.pages} ${result.pages === 1 ? "página" : "páginas"} → ${result.sheets} ${result.sheets === 1 ? "hoja" : "hojas"} ${targetLabel(job.target)}${job.duplex ? " doble faz" : ""}${job.duplex && result.pages % 2 === 1 ? " (la última sale de un solo lado)" : ""}`;
       });
-      if (sheets.A3.bw + sheets.A3.color > 0) $("#sizeA3").open = true;
+      Object.entries(totals).forEach(([key, value]) => {
+        const input = $(`#qty-${key}`);
+        if (input) input.value = value || "";
+      });
+      state.pdfApplied = new Set(Object.keys(totals));
+      state.duplexKeys = duplexKeys;
+      if (Object.keys(totals).some((key) => key.startsWith("A3") && totals[key] > 0)) $("#sizeA3").open = true;
       renderPdfResult();
       render();
     }
 
     function renderPdfResult() {
       const box = $("#pdfResult");
-      if (!state.pdfFiles.length && !state.pdfBusy) {
+      if (state.pdfBusy) {
+        box.hidden = false;
+        box.innerHTML = `<strong>${escapeHtml(state.pdfBusy)}</strong><progress class="pdf-progress"></progress>`;
+        return;
+      }
+      const total = state.pdfFiles.reduce((sum, job) => sum + jobSheets(job).sheets, 0);
+      const suggestion = Pdf.suggestBinding(total, BINDING_OPTIONS);
+      if (!state.pdfFiles.length || !suggestion) {
         box.hidden = true;
         box.innerHTML = "";
         return;
       }
       box.hidden = false;
-      if (state.pdfBusy) {
-        box.innerHTML = `
-          <strong>${escapeHtml(state.pdfBusy.text)}</strong>
-          <progress class="pdf-progress" max="${state.pdfBusy.total || 1}" value="${state.pdfBusy.done || 0}"></progress>
-        `;
-        return;
-      }
-
-      const pages = allPages();
-      const sheets = currentSheets();
-      const total = Pdf.totalSheets(sheets);
-      const parts = [];
-      ["A4", "A3"].forEach((size) => {
-        if (sheets[size].bw) parts.push(`${sheets[size].bw} ${size} B/N`);
-        if (sheets[size].color) parts.push(`${sheets[size].color} ${size} color`);
-      });
-      const odd = state.duplex && ["A4", "A3"].some((size) => pages.filter((page) => page.size === size).length % 2 === 1);
-      const otherSizes = pages.filter((page) => !page.exact).length;
-      const suggestion = Pdf.suggestBinding(total, BINDING_OPTIONS);
-      const hasBinding = state.bindings.length > 0;
-
       box.innerHTML = `
-        <div class="pdf-result-head">
-          <div>
-            <strong>${pages.length} ${pages.length === 1 ? "página" : "páginas"} → ${total} ${total === 1 ? "hoja" : "hojas"} ${state.duplex ? "doble faz" : "simple faz"}</strong>
-            <small>${parts.join(" · ") || "Sin páginas"}</small>
-          </div>
-          <button class="btn btn-ghost" type="button" data-action="remove-pdf">Quitar PDF</button>
+        <div class="pdf-binding">
+          <span>${suggestion.tooMany
+            ? `Son ${total} hojas: no entran en un solo anillado (máx. ${suggestion.option.maxSheets}). Harían falta ${suggestion.quantity} de ${suggestion.option.label}.`
+            : `Para ${total} hojas alcanza un anillado <b>${suggestion.option.label}</b> (hasta ${suggestion.option.maxSheets} hojas).`}</span>
+          ${state.bindings.length ? "" : `<button class="btn btn-secondary" type="button" data-action="add-suggested-binding" data-binding-type="${suggestion.option.id}" data-binding-qty="${suggestion.quantity}">Agregar anillado</button>`}
         </div>
-        <ul class="pdf-files">${state.pdfFiles.map((item) => `<li>${escapeHtml(item.name)}: ${item.pages.length} pág.</li>`).join("")}</ul>
-        ${odd ? `<p class="pdf-note">Hay una cantidad impar de páginas: la última hoja sale impresa de un solo lado.</p>` : ""}
-        ${otherSizes ? `<p class="pdf-note">${otherSizes} ${otherSizes === 1 ? "página no es" : "páginas no son"} A4 ni A3 exacto; se ${otherSizes === 1 ? "contó" : "contaron"} por el tamaño más parecido.</p>` : ""}
-        ${state.colorMode === "auto" ? `<p class="pdf-files">El color se detecta solo; si una página tiene apenas un logo o detalle de color, cuenta como color. Podés corregir las cantidades a mano.</p>` : ""}
-        ${suggestion ? `
-          <div class="pdf-binding">
-            <span>${suggestion.tooMany
-              ? `Son ${total} hojas: no entran en un solo anillado (máx. ${suggestion.option.maxSheets}). Harían falta ${suggestion.quantity} de ${suggestion.option.label}.`
-              : `Para ${total} hojas alcanza un anillado <b>${suggestion.option.label}</b> (hasta ${suggestion.option.maxSheets} hojas).`}</span>
-            ${hasBinding ? "" : `<button class="btn btn-secondary" type="button" data-action="add-suggested-binding" data-binding-type="${suggestion.option.id}" data-binding-qty="${suggestion.quantity}">Agregar anillado</button>`}
-          </div>` : ""}
       `;
     }
 
@@ -1645,39 +1746,26 @@
         showToast("Elegí un archivo PDF");
         return;
       }
-      const results = [];
       const errors = [];
-      for (const [index, item] of files.entries()) {
-        state.pdfBusy = { text: `Analizando ${item.name}…`, done: 0, total: 1 };
+      for (const item of files) {
+        state.pdfBusy = `Leyendo ${item.name}…`;
         renderPdfResult();
         try {
-          results.push(await Pdf.analyzePdf(item, {
-            detectColor: state.colorMode === "auto",
-            onProgress: (done, total) => {
-              state.pdfBusy = { text: `Analizando ${item.name} (${index + 1} de ${files.length}): página ${done} de ${total}`, done, total };
-              renderPdfResult();
-            }
-          }));
+          const pageCount = await Pdf.countPages(item);
+          state.pdfFiles.push({ id: state.nextPdfId++, name: item.name, pageCount, target: "A4-bw", duplex: false, pagesMode: "all", pagesText: "" });
         } catch (error) {
           errors.push(error.message);
         }
       }
       state.pdfBusy = false;
-      state.pdfFiles = results;
-      state.analyzedColor = state.colorMode === "auto";
-      if (results.length) applyPdfSheets();
-      else renderPdfResult();
-      if (errors.length) showToast(errors[0]);
-      else showToast("Presupuesto calculado desde el PDF");
+      renderPdfJobs();
+      applyPdfJobs();
+      showToast(errors.length ? errors[0] : "PDF cargado: elegí cómo imprimirlo");
     }
 
-    function setDuplex(duplex, { recompute = true } = {}) {
-      state.duplex = duplex;
-      document.querySelectorAll("[data-faz]").forEach((button) => {
-        button.setAttribute("aria-checked", String((button.dataset.faz === "doble") === duplex));
-      });
-      if (recompute && state.pdfFiles.length) applyPdfSheets();
-      else render();
+    function findJob(element) {
+      const card = element.closest("[data-job-id]");
+      return card ? state.pdfFiles.find((job) => job.id === Number(card.dataset.jobId)) : null;
     }
 
     const pdfDrop = $("#pdfDrop");
@@ -1692,32 +1780,52 @@
       if (event.dataTransfer.files.length) handlePdfFiles(event.dataTransfer.files);
     });
     $("#pdfInput").addEventListener("change", (event) => {
-      const files = event.target.files;
-      if (files.length) handlePdfFiles([...files]);
+      const files = [...event.target.files];
       event.target.value = "";
+      if (files.length) handlePdfFiles(files);
     });
 
-    document.querySelectorAll("[data-faz]").forEach((button) => {
-      button.addEventListener("click", () => setDuplex(button.dataset.faz === "doble"));
+    const pdfJobs = $("#pdfJobs");
+    // El formulario también escucha "input": cortamos la propagación para que el PDF maneje lo suyo.
+    pdfJobs.addEventListener("input", (event) => {
+      const job = findJob(event.target);
+      if (!job || event.target.dataset.jobField !== "pagesText") return;
+      event.stopPropagation();
+      job.pagesText = event.target.value;
+      applyPdfJobs();
     });
-
-    $("#colorMode").addEventListener("change", (event) => {
-      state.colorMode = event.target.value;
-      // Si se eligió detectar y los PDFs se leyeron sin detección, hay que volver a analizarlos.
-      if (state.colorMode === "auto" && state.pdfFiles.length && !state.analyzedColor) {
-        showToast("Volvé a cargar el PDF para detectar el color");
-        return;
+    pdfJobs.addEventListener("change", (event) => {
+      const job = findJob(event.target);
+      const field = event.target.dataset.jobField;
+      if (!job || !field) return;
+      event.stopPropagation();
+      job[field] = event.target.value;
+      if (field === "pagesMode") {
+        const input = event.target.closest("[data-job-id]").querySelector("[data-job-field='pagesText']");
+        input.hidden = job.pagesMode !== "custom";
+        if (!input.hidden) input.focus();
       }
-      applyPdfSheets();
+      applyPdfJobs();
+    });
+    pdfJobs.addEventListener("click", (event) => {
+      const job = findJob(event.target);
+      if (!job) return;
+      const faz = event.target.closest("[data-job-faz]");
+      if (faz) {
+        job.duplex = faz.dataset.jobFaz === "doble";
+        faz.parentElement.querySelectorAll("[data-job-faz]").forEach((button) => {
+          button.setAttribute("aria-checked", String(button === faz));
+        });
+        applyPdfJobs();
+      }
+      if (event.target.closest("[data-job-remove]")) {
+        state.pdfFiles = state.pdfFiles.filter((item) => item !== job);
+        renderPdfJobs();
+        applyPdfJobs();
+      }
     });
 
     $("#pdfResult").addEventListener("click", (event) => {
-      if (event.target.closest("[data-action='remove-pdf']")) {
-        state.pdfFiles = [];
-        ["A4", "A3"].forEach((size) => ["bw", "color"].forEach((type) => { $(`#qty-${size}-${type}`).value = ""; }));
-        renderPdfResult();
-        render();
-      }
       const add = event.target.closest("[data-action='add-suggested-binding']");
       if (add) {
         state.bindings.push({ id: state.nextBindingId++, type: add.dataset.bindingType, quantity: Number(add.dataset.bindingQty) || 1 });

@@ -6,7 +6,7 @@ import vm from 'node:vm';
 // El módulo es un script clásico del navegador: lo ejecutamos en un contexto aislado.
 const context = { window: {} };
 vm.runInNewContext(readFileSync(new URL('../public/presupuestos-pdf.js', import.meta.url), 'utf8'), context);
-const { classifySize, hasColor, computeSheets, totalSheets, suggestBinding } = context.window.PresupuestoPdf;
+const { parsePageSelection, sheetsFor, suggestBinding } = context.window.PresupuestoPdf;
 
 const BINDINGS = [
   { id: '7-9mm', maxSheets: 50 },
@@ -17,47 +17,27 @@ const BINDINGS = [
   { id: '40-45-50mm', maxSheets: 540 }
 ];
 
-const pages = (spec) => spec.split('').map((char) => ({
-  size: char === char.toLowerCase() ? 'A4' : 'A3',
-  color: char.toLowerCase() === 'c'
-}));
+const pagesOf = (text, count) => [...parsePageSelection(text, count).pages];
 
-test('clasifica A4, A3 y tamaños parecidos', () => {
-  assert.deepEqual({ ...classifySize(595, 842) }, { size: 'A4', exact: true });
-  assert.deepEqual({ ...classifySize(842, 595) }, { size: 'A4', exact: true });
-  assert.deepEqual({ ...classifySize(842, 1191) }, { size: 'A3', exact: true });
-  assert.deepEqual({ ...classifySize(612, 1008) }, { size: 'A4', exact: false });
+test('interpreta rangos y páginas sueltas sin repetir', () => {
+  assert.deepEqual(pagesOf('1-3, 5', 10), [1, 2, 3, 5]);
+  assert.deepEqual(pagesOf('8, 2-3; 3', 10), [2, 3, 8]);
+  assert.deepEqual(pagesOf(' 5 - 2 ', 10), [2, 3, 4, 5]);
+  assert.deepEqual(pagesOf('10', 10), [10]);
 });
 
-test('simple faz: una hoja por página', () => {
-  const sheets = computeSheets(pages('bbcbb'));
-  assert.deepEqual({ ...sheets.A4 }, { bw: 4, color: 1 });
-  assert.equal(totalSheets(sheets), 5);
+test('rechaza páginas fuera del PDF o texto inválido', () => {
+  assert.match(parsePageSelection('1-12', 10).error, /10 páginas/);
+  assert.match(parsePageSelection('0', 10).error, /afuera/);
+  assert.match(parsePageSelection('a-b', 10).error, /no es una página/);
+  assert.match(parsePageSelection('  ', 10).error, /Escribí/);
 });
 
-test('doble faz: la mitad de hojas, redondeando hacia arriba', () => {
-  const sheets = computeSheets(pages('bbbbb'), { duplex: true });
-  assert.deepEqual({ ...sheets.A4 }, { bw: 3, color: 0 });
-});
-
-test('doble faz: una cara en color hace la hoja color', () => {
-  const sheets = computeSheets(pages('bcbbcc'), { duplex: true });
-  assert.deepEqual({ ...sheets.A4 }, { bw: 1, color: 2 });
-});
-
-test('separa A4 de A3 y respeta el modo de color elegido', () => {
-  const list = pages('bcBC');
-  assert.deepEqual(JSON.parse(JSON.stringify(computeSheets(list))), { A4: { bw: 1, color: 1 }, A3: { bw: 1, color: 1 } });
-  assert.deepEqual(JSON.parse(JSON.stringify(computeSheets(list, { colorMode: 'bw' }))), { A4: { bw: 2, color: 0 }, A3: { bw: 2, color: 0 } });
-  assert.deepEqual(JSON.parse(JSON.stringify(computeSheets(list, { colorMode: 'color', duplex: true }))), { A4: { bw: 0, color: 1 }, A3: { bw: 0, color: 1 } });
-});
-
-test('detecta color solo cuando hay píxeles saturados suficientes', () => {
-  const gray = new Uint8ClampedArray(4 * 1000).fill(128);
-  assert.equal(hasColor(gray), false);
-  const colored = gray.slice();
-  for (let index = 0; index < 10; index += 1) colored.set([220, 30, 30, 255], index * 4);
-  assert.equal(hasColor(colored), true);
+test('simple faz: hojas = páginas; doble faz: la mitad hacia arriba', () => {
+  assert.equal(sheetsFor(7, false), 7);
+  assert.equal(sheetsFor(7, true), 4);
+  assert.equal(sheetsFor(8, true), 4);
+  assert.equal(sheetsFor(0, true), 0);
 });
 
 test('sugiere el anillado más chico donde entran las hojas', () => {
