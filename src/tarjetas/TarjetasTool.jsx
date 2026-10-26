@@ -163,7 +163,7 @@ export default function TarjetasTool({ tool }) {
       anchor.click();
       anchor.remove();
       setTimeout(() => URL.revokeObjectURL(url), 60000);
-      setMessage(`PDF generado: ${total} tarjetas en ${sheets.length} ${sheets.length === 1 ? 'hoja' : 'hojas'} (${pageCount} ${pageCount === 1 ? 'página' : 'páginas'}).`);
+      setMessage(`PDF generado: ${total} tarjetas en ${sheets.length} ${sheets.length === 1 ? 'hoja' : 'hojas'} (${pageCount} ${pageCount === 1 ? 'página' : 'páginas'}). Imprimilo a escala 100%, sin “Ajustar a página”.`);
     }, 'Generando PDF a tamaño real…');
   }
 
@@ -286,6 +286,15 @@ export default function TarjetasTool({ tool }) {
             <legend>Salida de impresión</legend>
             <label className="tc-checkbox"><input type="checkbox" checked={cutMarks} onChange={(event) => { setCutMarks(event.target.checked); setMessage(''); }} />Marcas de corte en el frente</label>
             <p className="tc-help">Trazo negro con base blanca. El dorso se exporta sin marcas y las guías nunca se imprimen.</p>
+            <div className="tc-print-checklist" role="note" aria-label="Cómo imprimir">
+              <strong>Para que el corte salga justo, al imprimir:</strong>
+              <ul>
+                <li>Papel <b>A4</b>, modo <b>sin bordes</b>.</li>
+                <li>Escala <b>100% / tamaño real</b>. Desactivá “Ajustar a página” y la ampliación automática.</li>
+                {mode === 'duplex' && <li>Doble faz girando por <b>{flip === 'long' ? 'borde largo' : 'borde corto'}</b>, igual que en este paso 1.</li>}
+                <li>Imprimí <b>una hoja de prueba</b> antes de todo el trabajo.</li>
+              </ul>
+            </div>
             <div className="tc-job-summary"><strong>{total} tarjetas</strong><span>{sheets.length} hojas A4 · {pageCount} páginas PDF</span></div>
             <button type="button" className="primary tc-generate" disabled={busy || Boolean(validation)} onClick={generatePdf}>
               {busy ? 'Procesando…' : 'Descargar PDF'}
@@ -317,11 +326,12 @@ export default function TarjetasTool({ tool }) {
             <canvas ref={canvasRef} onClick={selectOnSheet} aria-label={`Hoja ${sheetIndex + 1}, ${faceName(face).toLowerCase()}. ${items.length} tarjetas de 90 por 50 milímetros.`} />
           </div>
           <div className="tc-guide-key"><span><i className="tc-key-bleed" />Diseño 95 × 55 mm</span><span><i className="tc-key-trim" />Corte 90 × 50 mm</span><span>Guías y números: solo en pantalla</span></div>
-          <div className="tc-print-note">
-            <strong>Al imprimir: SIN BORDES · ESCALA 100% REAL</strong>
-            <p>Usá papel A4 y tamaño real. Desactivá “Ajustar a página” y cualquier ampliación automática del modo sin bordes.</p>
-            {mode === 'duplex' && <p>Doble faz con giro por <strong>{flip === 'long' ? 'borde largo' : 'borde corto'}</strong>. Cada dorso se ubica detrás de su frente; verificá el registro con una hoja de prueba.</p>}
-          </div>
+          {mode === 'duplex' && (
+            <div className="tc-print-note">
+              <strong>Doble faz</strong>
+              <p>Cada dorso se ubica detrás de su frente con giro por {flip === 'long' ? 'borde largo' : 'borde corto'}. El controlador de la impresora puede cambiar el giro: verificá el registro con una hoja de prueba.</p>
+            </div>
+          )}
         </section>
       </div>
     </section>

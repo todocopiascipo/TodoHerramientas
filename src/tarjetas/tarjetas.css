@@ -94,3 +94,7 @@
   .tc-tool .tool-heading { align-items: start; flex-wrap: wrap; }
   .tc-preview-toolbar { flex-wrap: wrap; }
 }
+.tc-print-checklist { margin-top: 16px; padding: 14px 16px; border-radius: 10px; background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); color: var(--text); font-size: 12.5px; line-height: 1.55; }
+.tc-print-checklist > strong { display: block; color: var(--warn); font-size: 13px; margin-bottom: 6px; }
+.tc-print-checklist ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.tc-print-checklist b { font-weight: 800; }

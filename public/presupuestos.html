@@ -398,9 +398,111 @@
 
     .actions {
       display: grid;
-      grid-template-columns: 1.2fr 1fr 0.8fr;
+      grid-template-columns: 1fr 1fr;
       gap: 12px;
       padding: 0 22px 22px;
+    }
+
+    .btn-whatsapp {
+      color: #ffffff;
+      background: #1f9d55;
+      box-shadow: 0 10px 22px rgba(31, 157, 85, 0.22);
+    }
+
+    .btn-whatsapp:hover {
+      filter: brightness(1.06);
+    }
+
+    .client-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 18px;
+      padding: 16px 22px;
+    }
+
+    .client-bar .hint {
+      grid-column: 1 / -1;
+      margin: -4px 0 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .binding-prices {
+      margin-top: 12px;
+    }
+
+    .binding-prices summary {
+      cursor: pointer;
+      color: var(--brand-a);
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .binding-prices-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    .history-panel .panel-header {
+      padding: 0 0 12px;
+      border: 0;
+    }
+
+    .history-panel {
+      margin-top: 18px;
+      padding: 18px 22px;
+    }
+
+    .history-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .history-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    .history-item strong {
+      display: block;
+      font-size: 0.95rem;
+    }
+
+    .history-item small {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .history-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .history-actions .btn,
+    .history-panel .panel-header .btn {
+      min-height: 36px;
+      padding: 0 12px;
+      font-size: 0.85rem;
+    }
+
+    .history-empty {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
     }
 
     .btn {
@@ -568,7 +670,10 @@
 
       .form-grid,
       .actions,
-      .discount-grid {
+      .discount-grid,
+      .client-bar,
+      .binding-prices-grid,
+      .history-item {
         grid-template-columns: 1fr;
       }
 
@@ -638,6 +743,18 @@
       <button class="tab-button" type="button" data-tab-target="special" aria-selected="false">Impresiones especiales</button>
     </nav>
 
+    <section class="panel client-bar" aria-label="Datos del cliente">
+      <div class="field">
+        <label for="clientName">Cliente (opcional)</label>
+        <input id="clientName" type="text" autocomplete="off" placeholder="Ej.: Juan" />
+      </div>
+      <div class="field">
+        <label for="clientPhone">WhatsApp del cliente (opcional)</label>
+        <input id="clientPhone" type="tel" autocomplete="off" inputmode="tel" placeholder="Ej.: 11 2345 6789" />
+      </div>
+      <p class="hint">El nombre se usa en el saludo. Con el número, “Enviar por WhatsApp” abre el chat de ese cliente; sin número, elegís el contacto en WhatsApp.</p>
+    </section>
+
     <section class="tab-panel active" id="commonPanel" data-tab-panel="common" aria-label="Impresiones comunes">
       <div class="layout">
         <form class="panel" data-calculator="common">
@@ -676,6 +793,10 @@
                 <button class="btn btn-add" type="button" data-action="add-binding">Agregar anillado</button>
               </div>
               <div class="binding-list" data-binding-list="common"></div>
+              <details class="binding-prices">
+                <summary>Editar precios de anillados</summary>
+                <div class="binding-prices-grid" data-binding-prices></div>
+              </details>
             </div>
 
             <div class="discount-card">
@@ -699,6 +820,7 @@
 
           <div class="actions">
             <button class="btn btn-primary" type="submit">Calcular presupuesto</button>
+            <button class="btn btn-whatsapp" type="button" data-action="whatsapp">Enviar por WhatsApp</button>
             <button class="btn btn-secondary" type="button" data-action="copy">Copiar mensaje</button>
             <button class="btn btn-ghost" type="button" data-action="clear">Limpiar</button>
           </div>
@@ -766,6 +888,7 @@
 
           <div class="actions">
             <button class="btn btn-primary" type="submit">Calcular presupuesto</button>
+            <button class="btn btn-whatsapp" type="button" data-action="whatsapp">Enviar por WhatsApp</button>
             <button class="btn btn-secondary" type="button" data-action="copy">Copiar mensaje</button>
             <button class="btn btn-ghost" type="button" data-action="clear">Limpiar</button>
           </div>
@@ -782,6 +905,13 @@
         </aside>
       </div>
     </section>
+    <section class="panel history-panel" aria-label="Historial de presupuestos">
+      <div class="panel-header">
+        <h2 class="panel-title">Historial</h2>
+        <button class="btn btn-ghost" type="button" data-action="clear-history">Borrar historial</button>
+      </div>
+      <div class="history-list" id="historyList"></div>
+    </section>
   </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite">Mensaje copiado</div>
@@ -789,6 +919,9 @@
   <script>
     // Para sumar una pestaña en el futuro, agrega su entrada en CALCULATORS y replica un panel HTML con data-calculator.
     const STORAGE_PREFIX = "copyBudget.price.";
+    const BINDING_PRICE_PREFIX = "copyBudget.binding.";
+    const HISTORY_KEY = "copyBudget.history";
+    const HISTORY_LIMIT = 30;
     const EMPTY_MESSAGE = "Completá las cantidades para generar el presupuesto.";
 
     const DEFAULT_PRICES = {
@@ -841,19 +974,19 @@
           }
 
           const lines = [
-            "Buenos Días!",
+            greetingLine(),
             "",
-            `Impresion Blanco y negro : ${formatMoney(bwPrice)}`,
-            `Impresion Color: ${formatMoney(colorPrice)}`,
+            `Impresión blanco y negro: ${formatMoney(bwPrice)} c/u`,
+            `Impresión color: ${formatMoney(colorPrice)} c/u`,
             ""
           ];
 
           if (bwPages > 0) {
-            lines.push(`${bwPages} pag B/N: ${formatMoney(bwTotal)}`);
+            lines.push(`${bwPages} pág. B/N: ${formatMoney(bwTotal)}`);
           }
 
           if (colorPages > 0) {
-            lines.push(`${colorPages} pag Color: ${formatMoney(colorTotal)}`);
+            lines.push(`${colorPages} pág. color: ${formatMoney(colorTotal)}`);
           }
 
           groupedBindings.forEach((binding) => {
@@ -900,12 +1033,12 @@
           }
 
           const lines = [
-            "Buenos Días!",
+            greetingLine(),
             "",
             "Impresiones especiales:",
             "",
-            `Chambril / Ilustración: ${formatMoney(chambrilPrice)}`,
-            `Adhesivo: ${formatMoney(adhesivePrice)}`,
+            `Chambril / Ilustración: ${formatMoney(chambrilPrice)} c/u`,
+            `Adhesivo: ${formatMoney(adhesivePrice)} c/u`,
             ""
           ];
 
@@ -977,13 +1110,29 @@
       return { amount, percent };
     }
 
+    function safeStorageGet(key) {
+      try { return localStorage.getItem(key); } catch (error) { return null; }
+    }
+
+    function safeStorageSet(key, value) {
+      try { localStorage.setItem(key, value); } catch (error) {}
+    }
+
     function loadStoredPrice(priceKey) {
-      const storedValue = localStorage.getItem(`${STORAGE_PREFIX}${priceKey}`);
+      const storedValue = safeStorageGet(`${STORAGE_PREFIX}${priceKey}`);
       return storedValue === null ? DEFAULT_PRICES[priceKey] : storedValue;
     }
 
     function saveStoredPrice(priceKey, value) {
-      localStorage.setItem(`${STORAGE_PREFIX}${priceKey}`, String(Math.max(0, Number(value) || 0)));
+      safeStorageSet(`${STORAGE_PREFIX}${priceKey}`, String(Math.max(0, Number(value) || 0)));
+    }
+
+    // Saludo según la hora y el nombre del cliente
+    function greetingLine() {
+      const hour = new Date().getHours();
+      const greeting = hour < 13 ? "Buenos días" : hour < 20 ? "Buenas tardes" : "Buenas noches";
+      const name = document.querySelector("#clientName").value.trim();
+      return name ? `${greeting}, ${name}!` : `${greeting}!`;
     }
 
     function collectFields(form) {
@@ -1030,6 +1179,7 @@
       form.addEventListener("change", () => renderCalculator(calculatorId));
 
       form.querySelector("[data-action='copy']").addEventListener("click", () => copyCalculatorMessage(calculatorId));
+      form.querySelector("[data-action='whatsapp']").addEventListener("click", () => sendWhatsApp(calculatorId));
       form.querySelector("[data-action='clear']").addEventListener("click", () => clearCalculator(calculatorId));
 
       const addBindingButton = form.querySelector("[data-action='add-binding']");
@@ -1121,6 +1271,34 @@
 
     function getBindingOption(type) {
       return BINDING_OPTIONS.find((option) => option.id === type) || BINDING_OPTIONS[0];
+    }
+
+    function loadBindingPrices() {
+      BINDING_OPTIONS.forEach((option) => {
+        option.defaultPrice = option.price;
+        const stored = safeStorageGet(`${BINDING_PRICE_PREFIX}${option.id}`);
+        if (stored !== null && stored !== "") option.price = Math.max(0, Number(stored) || 0);
+      });
+    }
+
+    function renderBindingPrices() {
+      const grid = document.querySelector("[data-binding-prices]");
+      if (!grid) return;
+      grid.innerHTML = BINDING_OPTIONS.map((option) => `
+        <div class="field">
+          <label for="bindingPrice${option.id}">${option.label}</label>
+          <input id="bindingPrice${option.id}" data-binding-price="${option.id}" type="number" min="0" step="1" inputmode="numeric" value="${option.price}">
+        </div>
+      `).join("");
+      grid.addEventListener("input", (event) => {
+        const input = event.target.closest("[data-binding-price]");
+        if (!input) return;
+        const option = getBindingOption(input.dataset.bindingPrice);
+        option.price = Math.max(0, Number(input.value) || 0);
+        safeStorageSet(`${BINDING_PRICE_PREFIX}${option.id}`, String(option.price));
+        renderBindings("common");
+        renderCalculator("common");
+      });
     }
 
     function getBindingSubtotal(calculatorId = "common") {
@@ -1232,9 +1410,155 @@
 
     async function copyCalculatorMessage(calculatorId = appState.activeTab) {
       const result = renderCalculator(calculatorId);
+      if (result.isEmpty) {
+        showToast("Completá las cantidades primero");
+        return;
+      }
       await copyToClipboard(result.message);
+      addToHistory(calculatorId, result);
       showToast("Mensaje copiado");
     }
+
+    // Arma el número para wa.me: sólo dígitos, con 549 para celulares de Argentina de 10 dígitos.
+    function normalizePhone(raw) {
+      let digits = String(raw || "").replace(/\D/g, "");
+      if (!digits) return "";
+      digits = digits.replace(/^00/, "");
+      if (digits.startsWith("0")) digits = digits.slice(1);
+      if (digits.length === 10) digits = `549${digits}`;
+      if (digits.startsWith("54") && !digits.startsWith("549") && digits.length === 12) digits = `549${digits.slice(2)}`;
+      return digits;
+    }
+
+    function sendWhatsApp(calculatorId = appState.activeTab) {
+      const result = renderCalculator(calculatorId);
+      if (result.isEmpty) {
+        showToast("Completá las cantidades primero");
+        return;
+      }
+      const phone = normalizePhone(document.querySelector("#clientPhone").value);
+      const url = `https://wa.me/${phone}?text=${encodeURIComponent(result.message)}`;
+      window.open(url, "_blank", "noopener");
+      addToHistory(calculatorId, result);
+    }
+
+    // ---------- Historial ----------
+    function loadHistory() {
+      try { return JSON.parse(safeStorageGet(HISTORY_KEY) || "[]"); } catch (error) { return []; }
+    }
+
+    function saveHistory(entries) {
+      safeStorageSet(HISTORY_KEY, JSON.stringify(entries.slice(0, HISTORY_LIMIT)));
+    }
+
+    function escapeHtml(text) {
+      return String(text).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+    }
+
+    function snapshotForm(calculatorId) {
+      const { fields } = appState.forms[calculatorId];
+      const values = {};
+      Object.entries(fields).forEach(([name, control]) => { values[name] = control.value; });
+      return {
+        values,
+        bindings: (appState.bindings[calculatorId] || []).map(({ type, quantity }) => ({ type, quantity }))
+      };
+    }
+
+    function addToHistory(calculatorId, result) {
+      const entries = loadHistory();
+      const client = document.querySelector("#clientName").value.trim();
+      const phone = document.querySelector("#clientPhone").value.trim();
+      const entry = {
+        id: Date.now(),
+        at: new Date().toISOString(),
+        tab: calculatorId,
+        client,
+        phone,
+        total: result.total,
+        message: result.message,
+        ...snapshotForm(calculatorId)
+      };
+      // Si es el mismo presupuesto que el último, sólo actualizamos la fecha
+      if (entries[0] && entries[0].tab === entry.tab && entries[0].message === entry.message) {
+        entries[0] = { ...entries[0], at: entry.at };
+      } else {
+        entries.unshift(entry);
+      }
+      saveHistory(entries);
+      renderHistory();
+    }
+
+    const dateFormatter = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" });
+
+    function renderHistory() {
+      const list = document.querySelector("#historyList");
+      const entries = loadHistory();
+      document.querySelector("[data-action='clear-history']").hidden = entries.length === 0;
+      if (!entries.length) {
+        list.innerHTML = `<p class="history-empty">Los presupuestos que copies o envíes por WhatsApp quedan guardados acá para reutilizarlos.</p>`;
+        return;
+      }
+      list.innerHTML = entries.map((entry) => `
+        <div class="history-item" data-history-id="${entry.id}">
+          <div>
+            <strong>${escapeHtml(entry.client || "Sin nombre")} · ${formatMoney(entry.total)}</strong>
+            <small>${dateFormatter.format(new Date(entry.at))} · ${entry.tab === "special" ? "Impresiones especiales" : "Impresiones comunes"}</small>
+          </div>
+          <div class="history-actions">
+            <button class="btn btn-secondary" type="button" data-history-action="open">Reabrir</button>
+            <button class="btn btn-ghost" type="button" data-history-action="copy">Copiar</button>
+            <button class="btn btn-ghost" type="button" data-history-action="delete" aria-label="Borrar del historial">×</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function reopenHistory(entry) {
+      setActiveTab(entry.tab);
+      const state = appState.forms[entry.tab];
+      Object.entries(entry.values || {}).forEach(([name, value]) => {
+        if (state.fields[name]) state.fields[name].value = value;
+      });
+      state.discountMode = "amount";
+      if (appState.bindings[entry.tab]) {
+        appState.bindings[entry.tab] = (entry.bindings || []).map((binding) => ({ ...binding, id: appState.nextBindingId++ }));
+        renderBindings(entry.tab);
+      }
+      document.querySelector("#clientName").value = entry.client || "";
+      document.querySelector("#clientPhone").value = entry.phone || "";
+      renderCalculator(entry.tab);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      showToast("Presupuesto reabierto");
+    }
+
+    document.querySelector("#historyList").addEventListener("click", async (event) => {
+      const button = event.target.closest("[data-history-action]");
+      if (!button) return;
+      const id = Number(button.closest("[data-history-id]").dataset.historyId);
+      const entries = loadHistory();
+      const entry = entries.find((item) => item.id === id);
+      if (!entry) return;
+      if (button.dataset.historyAction === "open") reopenHistory(entry);
+      if (button.dataset.historyAction === "copy") {
+        await copyToClipboard(entry.message);
+        showToast("Mensaje copiado");
+      }
+      if (button.dataset.historyAction === "delete") {
+        saveHistory(entries.filter((item) => item.id !== id));
+        renderHistory();
+      }
+    });
+
+    document.querySelector("[data-action='clear-history']").addEventListener("click", () => {
+      if (!window.confirm("¿Borrar todo el historial de presupuestos?")) return;
+      saveHistory([]);
+      renderHistory();
+    });
+
+    ["#clientName", "#clientPhone"].forEach((selector) => {
+      document.querySelector(selector).addEventListener("input", () => renderCalculator(appState.activeTab));
+    });
 
     async function copyToClipboard(message) {
       try {
@@ -1302,7 +1626,10 @@
       button.addEventListener("click", () => setActiveTab(button.dataset.tabTarget));
     });
 
+    loadBindingPrices();
+    renderBindingPrices();
     Object.keys(CALCULATORS).forEach(setupForm);
+    renderHistory();
   </script>
 </body>
 </html>

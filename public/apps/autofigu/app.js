@@ -221,8 +221,8 @@ function updateModeUI() {
   fitToggleButton.classList.toggle("is-active", imagePlacementMode === "contain");
   fitToggleButton.setAttribute("aria-pressed", String(imagePlacementMode === "contain"));
   fitModeHelp.textContent = imagePlacementMode === "contain"
-    ? "Modo actual: ajustar completa dentro del area util."
-    : "Modo actual: recortar para llenar el area util.";
+    ? "Modo actual: ajustar completa dentro del área útil."
+    : "Modo actual: recortar para llenar el área útil.";
   cropGrid.hidden = usesVisualCrop;
   cropEditor.hidden = !usesVisualCrop;
   zoomControl.hidden = !usesVisualCrop;
@@ -256,18 +256,18 @@ function modeUsesVisualCrop() {
 
 function getCropHelpText() {
   if (activeMode === "carnet") {
-    return "Arrastra la imagen para elegir con precision que parte entra en la foto 4 x 4.";
+    return "Arrastrá la imagen para elegir con precisión qué parte entra en la foto 4 x 4.";
   }
 
   if (activeMode === "personalizado") {
-    return "Arrastra la imagen para elegir con precision que parte entra en cada copia.";
+    return "Arrastrá la imagen para elegir con precisión qué parte entra en cada copia.";
   }
 
   if (activeMode === "folletoA5") {
-    return "Arrastra la imagen para elegir con precision que parte entra en el folleto A5.";
+    return "Arrastrá la imagen para elegir con precisión qué parte entra en el folleto A5.";
   }
 
-  return "Arrastra la imagen para elegir con precision que parte entra en el folleto A6.";
+  return "Arrastrá la imagen para elegir con precisión qué parte entra en el folleto A6.";
 }
 
 function getCropOptionsTitle() {
@@ -352,14 +352,14 @@ function updateCustomLayoutInfo() {
 
   const layout = calculatePersonalizadoLayout();
   if (autoCustomQuantity) {
-    customLayoutInfo.textContent = `${layout.count} copias automaticas de ${formatMm(layout.itemWidth)} x ${formatMm(layout.itemHeight)} mm en ${layout.columns} columnas x ${layout.rows} filas.`;
+    customLayoutInfo.textContent = `${layout.count} copias automáticas de ${formatMm(layout.itemWidth)} x ${formatMm(layout.itemHeight)} mm en ${layout.columns} columnas x ${layout.rows} filas.`;
     return;
   }
 
   const capped = layout.itemWidth !== customSize.width || layout.itemHeight !== customSize.height;
   customLayoutInfo.textContent = capped
-    ? `La medida supera el area imprimible: se ajusta a ${formatMm(layout.itemWidth)} x ${formatMm(layout.itemHeight)} mm.`
-    : `${layout.count} copias en ${layout.columns} columnas x ${layout.rows} filas. Separacion: ${formatMm(layout.gapX)} mm horizontal, ${formatMm(layout.gapY)} mm vertical.`;
+    ? `La medida supera el área imprimible: se ajusta a ${formatMm(layout.itemWidth)} x ${formatMm(layout.itemHeight)} mm.`
+    : `${layout.count} copias en ${layout.columns} columnas x ${layout.rows} filas. Separación: ${formatMm(layout.gapX)} mm horizontal, ${formatMm(layout.gapY)} mm vertical.`;
 }
 
 function formatMm(value) {
@@ -633,7 +633,7 @@ function resetApp() {
   rotatedImageCanvas = null;
   rotatedImageDataUrl = "";
   generateButton.disabled = true;
-  fileInfo.textContent = "Todavia no seleccionaste una imagen.";
+  fileInfo.textContent = "Todavía no seleccionaste una imagen.";
   drawCropEditor();
   drawEmptyPreview();
 }
@@ -893,7 +893,7 @@ function drawEmptyPreview() {
   previewContext.fillStyle = "#8a9690";
   previewContext.font = "600 5px system-ui, sans-serif";
   previewContext.textAlign = "center";
-  previewContext.fillText("La vista previa aparecera aca", SETTINGS.pageWidth / 2, SETTINGS.pageHeight / 2);
+  previewContext.fillText("La vista previa aparecerá acá", SETTINGS.pageWidth / 2, SETTINGS.pageHeight / 2);
   previewContext.restore();
 }
 
@@ -1211,7 +1211,7 @@ function drawCropEditor() {
     cropEditorContext.fillStyle = "#8a9690";
     cropEditorContext.font = "700 18px system-ui, sans-serif";
     cropEditorContext.textAlign = "center";
-    cropEditorContext.fillText("Carga una imagen para ajustar el recorte", cropEditorCanvas.width / 2, cropEditorCanvas.height / 2);
+    cropEditorContext.fillText("Cargá una imagen para ajustar el recorte", cropEditorCanvas.width / 2, cropEditorCanvas.height / 2);
     return;
   }
 
@@ -1606,7 +1606,7 @@ function generatePdf() {
     statusMessage.textContent = `PDF generado: ${pageCount} hoja(s).`;
   } catch (error) {
     console.error(error);
-    statusMessage.textContent = "No se pudo generar el PDF. Proba con otra imagen.";
+    statusMessage.textContent = "No se pudo generar el PDF. Probá con otra imagen.";
   } finally {
     generateButton.disabled = false;
   }

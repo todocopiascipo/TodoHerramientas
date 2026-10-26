@@ -256,14 +256,14 @@
     <header>
       <div>
         <h1>Cartel SVG A4 V 1.1</h1>
-        <p>Genera el vinilo A4: borde, encabezado calado y texto relleno, sin fondo negro exportado.</p>
+        <p>Generá el vinilo A4: borde, encabezado calado y texto relleno, sin fondo negro exportado.</p>
       </div>
       <p class="hint">A4 horizontal: 297 x 210 mm. A4 vertical: 210 x 297 mm.</p>
     </header>
 
     <section class="controls" aria-label="Controles del generador">
       <div class="field">
-        <label for="titleText">Titulo</label>
+        <label for="titleText">Título</label>
         <input id="titleText" type="text" value="VENDO" spellcheck="false">
       </div>
 
@@ -309,25 +309,25 @@ P/AL DIA 15.000KM
           <input id="border" type="range" min=".5" max="5" step=".25" value="2.2">
         </div>
         <div class="field">
-          <label for="headerHeight">Alto titulo</label>
+          <label for="headerHeight">Alto del título</label>
           <input id="headerHeight" type="range" min="36" max="86" value="54">
         </div>
       </div>
 
       <div class="row">
         <div class="field">
-          <label for="titleScale">Tamano titulo</label>
+          <label for="titleScale">Tamaño del título</label>
           <input id="titleScale" type="range" min="62" max="94" value="82">
         </div>
         <div class="field">
-          <label for="bodyScale">Tamano texto</label>
+          <label for="bodyScale">Tamaño del texto</label>
           <input id="bodyScale" type="range" min="58" max="94" value="82">
         </div>
       </div>
 
       <div class="row">
         <div class="field">
-          <label for="gap">Separacion lineas</label>
+          <label for="gap">Separación entre líneas</label>
           <input id="gap" type="range" min="0" max="12" value="4">
         </div>
       </div>
@@ -335,7 +335,7 @@ P/AL DIA 15.000KM
       <div class="checks">
         <label class="check">
           <input id="uppercase" type="checkbox" checked>
-          Convertir todo a mayusculas
+          Convertir todo a mayúsculas
         </label>
       </div>
 
@@ -596,7 +596,7 @@ P/AL DIA 15.000KM
       } catch {
         svgCode.focus();
         svgCode.select();
-        status.textContent = "Seleccione el SVG para copiarlo manualmente.";
+        status.textContent = "Seleccioná el SVG para copiarlo a mano.";
       }
     }
 
