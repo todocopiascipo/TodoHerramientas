@@ -31,7 +31,7 @@ http://127.0.0.1:5173
 
 ## Flujo
 
-1. Elegir una herramienta desde Inicio o desde la barra superior.
+1. Elegir una herramienta desde Inicio (con buscador) o desde el menú lateral. El tema claro/oscuro se elige abajo en el menú.
 2. En Talonarios, cargar un PDF limpio sin numeracion ni textos ORIGINAL/COPIA.
 3. Ubicar visualmente los marcadores de ORIGINAL/COPIA y numeracion sobre la primera pagina.
 4. Ajustar textos, rango, digitos, fuentes, colores y alineacion.
@@ -79,3 +79,5 @@ public/apps/todoautos
 ```
 
 Las carpetas originales usadas como fuente no fueron modificadas.
+
+Cada app integrada carga `public/apps/suite-theme.css` (colores y fuente comunes) y `public/apps/suite-embed.js`, que oculta su encabezado propio cuando se abre dentro de la suite. El registro de herramientas del menú y del Inicio está en `src/shell/tools.js`.

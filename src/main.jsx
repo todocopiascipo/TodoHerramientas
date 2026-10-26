@@ -6,6 +6,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 import './styles.css';
 import TarjetasTool from './tarjetas/TarjetasTool.jsx';
+import { SuiteLayout, ToolHeader } from './shell/Shell.jsx';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
@@ -224,7 +225,7 @@ function FieldMarker({ label, color, position, scale, pdfHeight, active, onPoint
   );
 }
 
-function TalonariosTool({ mode = 'generator', onGoHome }) {
+function TalonariosTool({ tool }) {
   const [config, setConfig] = useState(() => normalizeConfig(DEFAULT_CONFIG));
   const [pdfFileName, setPdfFileName] = useState('');
   const [pdfBytes, setPdfBytes] = useState(null);
@@ -453,21 +454,9 @@ function TalonariosTool({ mode = 'generator', onGoHome }) {
 
   return (
     <>
-      <div className="tool-heading">
-        <div>
-          <p className="eyebrow">Herramienta local para imprenta</p>
-          <h1>{mode === 'presets' ? 'Presets de talonarios' : 'Generadora de talonarios'}</h1>
-          <p className="tool-subtitle">
-            {mode === 'presets'
-              ? 'Guardar y reutilizar configuraciones de numeracion, textos, posicion y estilos.'
-              : 'Numerador PDF ORIGINAL/COPIA para plantillas limpias.'}
-          </p>
-        </div>
-        <div className="tool-actions">
-          <button type="button" className="home-link" onClick={onGoHome}>Volver al inicio</button>
-          <div className="status-pill">{status}</div>
-        </div>
-      </div>
+      <ToolHeader tool={tool}>
+        <div className="status-pill" role="status">{status}</div>
+      </ToolHeader>
       <section className="workspace">
         <aside className="control-panel">
           <section className="panel-section">
@@ -594,6 +583,7 @@ function TalonariosTool({ mode = 'generator', onGoHome }) {
             <div className="canvas-stage" style={{ width: pdfPageSize.width * renderScale, height: pdfPageSize.height * renderScale }}>
               <canvas
                 ref={canvasRef}
+                hidden={!pdfBytes}
                 onClick={(event) => setFieldFromViewerPoint(event, activeField)}
               />
               {pdfBytes && (
@@ -692,294 +682,10 @@ function StyleFields({ title, field, config, fontOptions, updateConfig }) {
   );
 }
 
-function PresupuestosTool({ onGoHome }) {
-  return (
-    <section className="budget-shell">
-      <div className="tool-heading">
-        <div>
-          <p className="eyebrow">Herramienta comercial</p>
-          <h1>Calculadora de presupuestos</h1>
-          <p className="tool-subtitle">Fotocopias, impresiones, papeles especiales y anillados.</p>
-        </div>
-        <div className="tool-actions">
-          <button type="button" className="home-link" onClick={onGoHome}>Volver al inicio</button>
-          <div className="status-pill">Lista para calcular</div>
-        </div>
-      </div>
-      <div className="iframe-card">
-        <iframe
-          title="Calculadora de presupuestos Todo Copias"
-          src="/presupuestos.html"
-        />
-      </div>
-    </section>
-  );
+function renderTool(tool) {
+  if (tool.id === 'talonarios') return <TalonariosTool tool={tool} />;
+  if (tool.id === 'tarjetas') return <TarjetasTool tool={tool} />;
+  return null;
 }
 
-function EmbeddedAppTool({ eyebrow, title, subtitle, src, iframeTitle, onGoHome }) {
-  return (
-    <section className="budget-shell">
-      <div className="tool-heading">
-        <div>
-          <p className="eyebrow">{eyebrow}</p>
-          <h1>{title}</h1>
-          <p className="tool-subtitle">{subtitle}</p>
-        </div>
-        <div className="tool-actions">
-          <button className="secondary home-link" type="button" onClick={onGoHome}>
-            Volver al inicio
-          </button>
-        </div>
-      </div>
-      <div className="iframe-card embedded-app-frame">
-        <iframe
-          title={iframeTitle}
-          src={src}
-        />
-      </div>
-    </section>
-  );
-}
-
-const TOOLS = [
-  {
-    id: 'talonarios',
-    path: '/talonarios',
-    title: 'Generador de Talonarios',
-    icon: 'PDF',
-    description: 'Numerá PDFs de talonarios con ORIGINAL/COPIA, prefijos, rangos, fuentes y vista previa visual.'
-  },
-  {
-    id: 'presupuestos',
-    path: '/presupuestos',
-    title: 'Calculadora de Presupuestos',
-    icon: '$',
-    description: 'Calculá presupuestos de fotocopias, impresiones, papeles especiales y anillados. Usa /presupuestos.html como herramienta integrada.'
-  },
-  {
-    id: 'presets',
-    path: '/presets-talonarios',
-    title: 'Presets de Talonarios',
-    icon: 'CFG',
-    description: 'Guardá, cargá y reutilizá configuraciones frecuentes para acelerar trabajos repetidos de numeración.'
-  },
-  {
-    id: 'autofigu',
-    path: '/autofigu',
-    title: 'AutoFigu',
-    icon: 'AF',
-    description: 'Abri la aplicacion AutoFigu integrada en esta suite local, conservada como herramienta independiente.'
-  },
-  {
-    id: 'tarjetas',
-    path: '/tarjetas',
-    title: 'TARJETAS',
-    icon: 'TJ',
-    description: 'Armá hojas A4 con 10 tarjetas de 90 × 50 mm. Simple o doble faz, demasía y marcas de corte.'
-  },
-  {
-    id: 'inversor-bn-impresion',
-    path: '/inversor-bn-impresion',
-    title: 'Inversor B/N Impresion',
-    icon: 'BN',
-    description: 'Inverti blanco y negro para preparar archivos de impresion desde la aplicacion integrada.'
-  },
-  {
-    id: 'todopedidos',
-    path: '/todopedidos',
-    title: 'TodoPedidos',
-    icon: 'TP',
-    description: 'Arma pedidos para proveedores con listas guardadas, copiado rapido y matching opcional contra Excel.'
-  },
-  {
-    id: 'todoautos',
-    path: '/todoautos',
-    title: 'TodoAutos V 1.1',
-    icon: 'TA',
-    description: 'Genera carteles A4 para vinilo rotulado con fondo transparente, encabezado calado y exportacion SVG/PNG.'
-  }
-];
-
-function HomePage({ onOpenTool }) {
-  return (
-    <section className="home-page">
-      <div className="home-hero">
-        <p className="eyebrow">Todo Copias</p>
-        <h1>Panel principal</h1>
-        <p className="tool-subtitle">Elegí una herramienta para trabajar rápido desde una suite clara y profesional.</p>
-      </div>
-
-      <div className="tool-grid">
-        {TOOLS.map((tool) => (
-          <article className="tool-card" key={tool.id}>
-            <div className="tool-icon">{tool.icon}</div>
-            <h2>{tool.title}</h2>
-            <p>{tool.description}</p>
-            <button type="button" className="primary" onClick={() => onOpenTool(tool.path)}>
-              Abrir
-            </button>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function SuiteApp() {
-  const getPath = () => window.location.pathname;
-  const [path, setPath] = useState(getPath);
-
-  const navigate = useCallback((nextPath) => {
-    window.history.pushState({}, '', nextPath);
-    setPath(nextPath);
-  }, []);
-
-  useEffect(() => {
-    const onPopState = () => setPath(getPath());
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
-  }, []);
-
-  const activeTool = path === '/presupuestos'
-    ? 'presupuestos'
-    : path === '/talonarios'
-      ? 'talonarios'
-      : path === '/presets-talonarios'
-        ? 'presets'
-        : path === '/autofigu'
-          ? 'autofigu'
-          : path === '/tarjetas'
-            ? 'tarjetas'
-          : path === '/inversor-bn-impresion'
-            ? 'inversor-bn-impresion'
-            : path === '/todopedidos'
-              ? 'todopedidos'
-              : path === '/todoautos'
-                ? 'todoautos'
-                : 'home';
-
-  return (
-    <main className="app-shell">
-      <header className="suite-header">
-        <div>
-          <p className="eyebrow">Todo Copias</p>
-          <h1>Suite de herramientas</h1>
-          <p className="tool-subtitle">Diseño, impresión y gestión para Todo Copias.</p>
-        </div>
-        <nav className="suite-tabs" aria-label="Herramientas Todo Copias">
-          <button
-            type="button"
-            className={activeTool === 'home' ? 'active' : ''}
-            onClick={() => navigate('/')}
-          >
-            Inicio
-          </button>
-          <button
-            type="button"
-            className={activeTool === 'presupuestos' ? 'active' : ''}
-            onClick={() => navigate('/presupuestos')}
-          >
-            Presupuestos
-          </button>
-          <button
-            type="button"
-            className={activeTool === 'talonarios' ? 'active' : ''}
-            onClick={() => navigate('/talonarios')}
-          >
-            Talonarios
-          </button>
-          <button
-            type="button"
-            className={activeTool === 'presets' ? 'active' : ''}
-            onClick={() => navigate('/presets-talonarios')}
-          >
-            Presets
-          </button>
-          <button
-            type="button"
-            className={activeTool === 'autofigu' ? 'active' : ''}
-            onClick={() => navigate('/autofigu')}
-          >
-            AutoFigu
-          </button>
-          <button
-            type="button"
-            className={activeTool === 'tarjetas' ? 'active' : ''}
-            onClick={() => navigate('/tarjetas')}
-          >
-            TARJETAS
-          </button>
-          <button
-            type="button"
-            className={activeTool === 'inversor-bn-impresion' ? 'active' : ''}
-            onClick={() => navigate('/inversor-bn-impresion')}
-          >
-            Inversor B/N
-          </button>
-          <button
-            type="button"
-            className={activeTool === 'todopedidos' ? 'active' : ''}
-            onClick={() => navigate('/todopedidos')}
-          >
-            TodoPedidos
-          </button>
-          <button
-            type="button"
-            className={activeTool === 'todoautos' ? 'active' : ''}
-            onClick={() => navigate('/todoautos')}
-          >
-            TodoAutos V 1.1
-          </button>
-        </nav>
-      </header>
-
-      {activeTool === 'home' && <HomePage onOpenTool={navigate} />}
-      {activeTool === 'presupuestos' && <PresupuestosTool onGoHome={() => navigate('/')} />}
-      {activeTool === 'talonarios' && <TalonariosTool onGoHome={() => navigate('/')} />}
-      {activeTool === 'presets' && <TalonariosTool mode="presets" onGoHome={() => navigate('/')} />}
-      {activeTool === 'tarjetas' && <TarjetasTool onGoHome={() => navigate('/')} />}
-      {activeTool === 'autofigu' && (
-        <EmbeddedAppTool
-          eyebrow="Herramienta de armado"
-          title="AutoFigu"
-          subtitle="Figuritas, fotos carnet y folletos dentro de la suite Todo Copias."
-          src="/apps/autofigu/index.html"
-          iframeTitle="AutoFigu"
-          onGoHome={() => navigate('/')}
-        />
-      )}
-      {activeTool === 'inversor-bn-impresion' && (
-        <EmbeddedAppTool
-          eyebrow="Herramienta de impresion"
-          title="Inversor B/N Impresion"
-          subtitle="Inversion de blanco y negro para preparar archivos antes de imprimir."
-          src="/apps/inversor-bn-impresion/index.html"
-          iframeTitle="Inversor B/N Impresion"
-          onGoHome={() => navigate('/')}
-        />
-      )}
-      {activeTool === 'todopedidos' && (
-        <EmbeddedAppTool
-          eyebrow="Herramienta de compras"
-          title="TodoPedidos"
-          subtitle="Listas de pedido con Excel opcional, precios esperados y guardado local."
-          src="/apps/todopedidos/index.html"
-          iframeTitle="TodoPedidos"
-          onGoHome={() => navigate('/')}
-        />
-      )}
-      {activeTool === 'todoautos' && (
-        <EmbeddedAppTool
-          eyebrow="Herramienta de rotulacion"
-          title="TodoAutos V 1.1"
-          subtitle="Carteles A4 para vinilo con fondo transparente, texto calado y exportacion SVG o PNG."
-          src="/apps/todoautos/index.html"
-          iframeTitle="TodoAutos V 1.1"
-          onGoHome={() => navigate('/')}
-        />
-      )}
-    </main>
-  );
-}
-
-createRoot(document.getElementById('root')).render(<SuiteApp />);
+createRoot(document.getElementById('root')).render(<SuiteLayout renderTool={renderTool} />);

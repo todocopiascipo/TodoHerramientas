@@ -4,6 +4,7 @@ import { readArtwork, readPdfPage } from './assets.js';
 import { createTarjetasPdf } from './pdf.js';
 import { paintSheet } from './preview.js';
 import './tarjetas.css';
+import { ToolHeader } from '../shell/Shell.jsx';
 
 const ACCEPT = '.jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf';
 const faceName = (face) => face === 'front' ? 'Frente' : 'Dorso';
@@ -32,7 +33,7 @@ function Upload({ label, detail, multiple = false, onFiles, disabled, compact = 
   );
 }
 
-export default function TarjetasTool({ onGoHome }) {
+export default function TarjetasTool({ tool }) {
   const [designs, setDesigns] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [mode, setMode] = useState('simple');
@@ -180,14 +181,7 @@ export default function TarjetasTool({ onGoHome }) {
 
   return (
     <section className="tc-tool">
-      <div className="tool-heading">
-        <div>
-          <p className="eyebrow">Armado para impresión</p>
-          <h1>TARJETAS</h1>
-          <p className="tool-subtitle">Tu matriz de 10 tarjetas, lista para imprimir en A4.</p>
-        </div>
-        <button type="button" className="secondary home-link" onClick={onGoHome}>Volver al inicio</button>
-      </div>
+      <ToolHeader tool={tool} />
 
       <div className="tc-specs" aria-label="Medidas de la plantilla">
         <div><strong>90 × 50 <small>mm</small></strong><span>Tarjeta terminada</span></div>
