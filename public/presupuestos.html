@@ -883,6 +883,156 @@
         grid-column: 1 / -1;
       }
     }
+
+    /* ---------- Presupuesto desde PDF ---------- */
+    .pdf-import {
+      grid-column: 1 / -1;
+      display: grid;
+      gap: 12px;
+    }
+
+    .pdf-drop {
+      position: relative;
+      display: grid;
+      justify-items: center;
+      gap: 4px;
+      padding: 18px 16px;
+      border: 2px dashed rgba(30, 97, 168, 0.35);
+      border-radius: var(--radius);
+      background: rgba(30, 97, 168, 0.05);
+      color: var(--brand-a);
+      text-align: center;
+      cursor: pointer;
+      transition: background 160ms ease, border-color 160ms ease;
+    }
+
+    .pdf-drop:hover,
+    .pdf-drop.is-dragging,
+    .pdf-drop:focus-within {
+      border-color: var(--brand-a);
+      background: rgba(30, 97, 168, 0.1);
+    }
+
+    .pdf-drop input {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .pdf-drop strong {
+      font-size: 1rem;
+    }
+
+    .pdf-drop span {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .pdf-options {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 14px;
+    }
+
+    .faz-switch {
+      display: inline-grid;
+      grid-template-columns: 1fr 1fr;
+      padding: 4px;
+      border-radius: var(--radius);
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+    }
+
+    .faz-switch button {
+      min-height: 38px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .faz-switch button[aria-checked="true"] {
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--brand-a), var(--brand-b));
+    }
+
+    .pdf-options select {
+      min-height: 46px;
+      width: auto;
+      flex: 1;
+      min-width: 210px;
+    }
+
+    .pdf-result {
+      display: grid;
+      gap: 10px;
+      padding: 14px 16px;
+      border: 1px solid rgba(30, 97, 168, 0.3);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    .pdf-result-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .pdf-result-head strong {
+      display: block;
+      font-size: 0.98rem;
+    }
+
+    .pdf-result-head small,
+    .pdf-files {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .pdf-files {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .pdf-note {
+      margin: 0;
+      color: #87591b;
+      font-size: 0.82rem;
+    }
+
+    .pdf-binding {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px 12px;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      background: var(--surface-soft);
+      font-size: 0.88rem;
+    }
+
+    .pdf-result .btn,
+    .pdf-binding .btn {
+      min-height: 36px;
+      padding: 0 12px;
+      font-size: 0.85rem;
+    }
+
+    .pdf-progress {
+      width: 100%;
+      height: 8px;
+      accent-color: var(--brand-a);
+    }
   </style>
   <script src="/apps/suite-embed.js"></script>
   <link rel="stylesheet" href="/apps/suite-theme.css">
@@ -908,10 +1058,30 @@
         </div>
 
         <div class="form-grid">
+          <section class="pdf-import" aria-label="Presupuesto desde PDF">
+            <label class="pdf-drop" id="pdfDrop">
+              <input id="pdfInput" type="file" accept="application/pdf,.pdf" multiple aria-label="Elegir PDF para presupuestar">
+              <strong>Soltá un PDF acá o hacé clic para elegirlo</strong>
+              <span>Cuenta las páginas y detecta tamaño (A4 / A3) y color. Podés cargar varios archivos.</span>
+            </label>
+            <div class="pdf-options">
+              <div class="faz-switch" role="radiogroup" aria-label="Tipo de impresión">
+                <button type="button" role="radio" aria-checked="true" data-faz="simple">Simple faz</button>
+                <button type="button" role="radio" aria-checked="false" data-faz="doble">Doble faz</button>
+              </div>
+              <select id="colorMode" aria-label="Color de las páginas">
+                <option value="auto">Detectar color automáticamente</option>
+                <option value="bw">Todo en blanco y negro</option>
+                <option value="color">Todo en color</option>
+              </select>
+            </div>
+            <div class="pdf-result" id="pdfResult" hidden></div>
+          </section>
+
           <section class="size-section" aria-labelledby="sizeA4Title">
             <div class="size-head">
               <h3 class="module-title" id="sizeA4Title">Impresiones A4</h3>
-              <p class="module-hint">Cargá la cantidad. Los precios se guardan solos; desbloqueá el candado para cambiarlos.</p>
+              <p class="module-hint">Cantidad de hojas (con un PDF se completa sola). Los precios se guardan; desbloqueá el candado para cambiarlos.</p>
             </div>
             <div class="print-table" data-size-rows="A4"></div>
           </section>
@@ -985,6 +1155,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite">Mensaje copiado</div>
 
+  <script src="/presupuestos-pdf.js"></script>
   <script>
     const STORAGE_PREFIX = "copyBudget.price.";
     const LOCK_PREFIX = "copyBudget.lock.";
@@ -995,8 +1166,8 @@
 
     // Tipos de impresión por tamaño. Las claves A4 son las que ya se usaban, así se conservan los precios guardados.
     const PRINT_TYPES = [
-      { id: "bw", label: "B/N", unit: "pág." },
-      { id: "color", label: "Color", unit: "pág." },
+      { id: "bw", label: "B/N", unit: "hojas" },
+      { id: "color", label: "Color", unit: "hojas" },
       { id: "chambril", label: "Chambril / Ilustración", unit: "hojas" },
       { id: "adhesive", label: "Adhesivo", unit: "hojas" }
     ];
@@ -1021,7 +1192,11 @@
     const state = {
       bindings: [],
       nextBindingId: 1,
-      discountMode: "amount"
+      discountMode: "amount",
+      duplex: false,
+      colorMode: "auto",
+      pdfFiles: [],
+      pdfBusy: false
     };
 
     const moneyFormatter = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 });
@@ -1252,7 +1427,9 @@
 
       const text = [];
       lines.filter((line) => line.quantity > 0).forEach((line) => {
-        text.push(`${line.quantity} ${line.type.unit} ${line.size} ${line.type.label} (${formatMoney(line.price)} c/u): ${formatMoney(line.total)}`);
+        const faz = state.duplex && (line.type.id === "bw" || line.type.id === "color") ? " doble faz" : "";
+        const unit = line.quantity === 1 ? "hoja" : "hojas";
+        text.push(`${line.quantity} ${unit} ${line.size} ${line.type.label}${faz} (${formatMoney(line.price)} c/u): ${formatMoney(line.total)}`);
       });
       getGroupedBindings().forEach((binding) => {
         const label = binding.quantity === 1 ? "1 Anillado" : `${binding.quantity} Anillados`;
@@ -1301,6 +1478,7 @@
 
     function snapshot() {
       return {
+        duplex: state.duplex,
         quantities: Object.fromEntries(getLines().map((line) => [`${line.size}-${line.type.id}`, line.row.querySelector("[data-qty]").value])),
         bindings: state.bindings.map(({ type, quantity }) => ({ type, quantity })),
         discountAmount: $("#discountAmount").value
@@ -1362,7 +1540,9 @@
       $("#discountAmount").value = "";
       state.discountMode = "amount";
       state.bindings = [];
+      state.pdfFiles = [];
       renderBindings();
+      renderPdfResult();
     }
 
     function reopen(entry) {
@@ -1373,6 +1553,7 @@
       });
       state.bindings = (entry.bindings || []).map((binding) => ({ ...binding, id: state.nextBindingId++ }));
       $("#discountAmount").value = entry.discountAmount || "";
+      setDuplex(Boolean(entry.duplex), { recompute: false });
       if (Object.entries(entry.quantities || {}).some(([key, value]) => key.startsWith("A3") && toNumber(value) > 0)) {
         $("#sizeA3").open = true;
       }
@@ -1381,6 +1562,170 @@
       window.scrollTo({ top: 0, behavior: "smooth" });
       showToast("Presupuesto reabierto");
     }
+
+    // ---------- Presupuesto desde PDF ----------
+    const Pdf = window.PresupuestoPdf;
+
+    function allPages() {
+      return state.pdfFiles.flatMap((item) => item.pages);
+    }
+
+    function currentSheets() {
+      return Pdf.computeSheets(allPages(), { duplex: state.duplex, colorMode: state.colorMode });
+    }
+
+    // Vuelca las hojas calculadas en las cantidades de B/N y color (A4 y A3).
+    function applyPdfSheets() {
+      if (!state.pdfFiles.length) return;
+      const sheets = currentSheets();
+      ["A4", "A3"].forEach((size) => {
+        ["bw", "color"].forEach((type) => {
+          $(`#qty-${size}-${type}`).value = sheets[size][type] || "";
+        });
+      });
+      if (sheets.A3.bw + sheets.A3.color > 0) $("#sizeA3").open = true;
+      renderPdfResult();
+      render();
+    }
+
+    function renderPdfResult() {
+      const box = $("#pdfResult");
+      if (!state.pdfFiles.length && !state.pdfBusy) {
+        box.hidden = true;
+        box.innerHTML = "";
+        return;
+      }
+      box.hidden = false;
+      if (state.pdfBusy) {
+        box.innerHTML = `
+          <strong>${escapeHtml(state.pdfBusy.text)}</strong>
+          <progress class="pdf-progress" max="${state.pdfBusy.total || 1}" value="${state.pdfBusy.done || 0}"></progress>
+        `;
+        return;
+      }
+
+      const pages = allPages();
+      const sheets = currentSheets();
+      const total = Pdf.totalSheets(sheets);
+      const parts = [];
+      ["A4", "A3"].forEach((size) => {
+        if (sheets[size].bw) parts.push(`${sheets[size].bw} ${size} B/N`);
+        if (sheets[size].color) parts.push(`${sheets[size].color} ${size} color`);
+      });
+      const odd = state.duplex && ["A4", "A3"].some((size) => pages.filter((page) => page.size === size).length % 2 === 1);
+      const otherSizes = pages.filter((page) => !page.exact).length;
+      const suggestion = Pdf.suggestBinding(total, BINDING_OPTIONS);
+      const hasBinding = state.bindings.length > 0;
+
+      box.innerHTML = `
+        <div class="pdf-result-head">
+          <div>
+            <strong>${pages.length} ${pages.length === 1 ? "página" : "páginas"} → ${total} ${total === 1 ? "hoja" : "hojas"} ${state.duplex ? "doble faz" : "simple faz"}</strong>
+            <small>${parts.join(" · ") || "Sin páginas"}</small>
+          </div>
+          <button class="btn btn-ghost" type="button" data-action="remove-pdf">Quitar PDF</button>
+        </div>
+        <ul class="pdf-files">${state.pdfFiles.map((item) => `<li>${escapeHtml(item.name)}: ${item.pages.length} pág.</li>`).join("")}</ul>
+        ${odd ? `<p class="pdf-note">Hay una cantidad impar de páginas: la última hoja sale impresa de un solo lado.</p>` : ""}
+        ${otherSizes ? `<p class="pdf-note">${otherSizes} ${otherSizes === 1 ? "página no es" : "páginas no son"} A4 ni A3 exacto; se ${otherSizes === 1 ? "contó" : "contaron"} por el tamaño más parecido.</p>` : ""}
+        ${state.colorMode === "auto" ? `<p class="pdf-files">El color se detecta solo; si una página tiene apenas un logo o detalle de color, cuenta como color. Podés corregir las cantidades a mano.</p>` : ""}
+        ${suggestion ? `
+          <div class="pdf-binding">
+            <span>${suggestion.tooMany
+              ? `Son ${total} hojas: no entran en un solo anillado (máx. ${suggestion.option.maxSheets}). Harían falta ${suggestion.quantity} de ${suggestion.option.label}.`
+              : `Para ${total} hojas alcanza un anillado <b>${suggestion.option.label}</b> (hasta ${suggestion.option.maxSheets} hojas).`}</span>
+            ${hasBinding ? "" : `<button class="btn btn-secondary" type="button" data-action="add-suggested-binding" data-binding-type="${suggestion.option.id}" data-binding-qty="${suggestion.quantity}">Agregar anillado</button>`}
+          </div>` : ""}
+      `;
+    }
+
+    async function handlePdfFiles(fileList) {
+      const files = [...fileList].filter((item) => /\.pdf$/i.test(item.name) || item.type === "application/pdf");
+      if (!files.length) {
+        showToast("Elegí un archivo PDF");
+        return;
+      }
+      const results = [];
+      const errors = [];
+      for (const [index, item] of files.entries()) {
+        state.pdfBusy = { text: `Analizando ${item.name}…`, done: 0, total: 1 };
+        renderPdfResult();
+        try {
+          results.push(await Pdf.analyzePdf(item, {
+            detectColor: state.colorMode === "auto",
+            onProgress: (done, total) => {
+              state.pdfBusy = { text: `Analizando ${item.name} (${index + 1} de ${files.length}): página ${done} de ${total}`, done, total };
+              renderPdfResult();
+            }
+          }));
+        } catch (error) {
+          errors.push(error.message);
+        }
+      }
+      state.pdfBusy = false;
+      state.pdfFiles = results;
+      state.analyzedColor = state.colorMode === "auto";
+      if (results.length) applyPdfSheets();
+      else renderPdfResult();
+      if (errors.length) showToast(errors[0]);
+      else showToast("Presupuesto calculado desde el PDF");
+    }
+
+    function setDuplex(duplex, { recompute = true } = {}) {
+      state.duplex = duplex;
+      document.querySelectorAll("[data-faz]").forEach((button) => {
+        button.setAttribute("aria-checked", String((button.dataset.faz === "doble") === duplex));
+      });
+      if (recompute && state.pdfFiles.length) applyPdfSheets();
+      else render();
+    }
+
+    const pdfDrop = $("#pdfDrop");
+    pdfDrop.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      pdfDrop.classList.add("is-dragging");
+    });
+    pdfDrop.addEventListener("dragleave", () => pdfDrop.classList.remove("is-dragging"));
+    pdfDrop.addEventListener("drop", (event) => {
+      event.preventDefault();
+      pdfDrop.classList.remove("is-dragging");
+      if (event.dataTransfer.files.length) handlePdfFiles(event.dataTransfer.files);
+    });
+    $("#pdfInput").addEventListener("change", (event) => {
+      const files = event.target.files;
+      if (files.length) handlePdfFiles([...files]);
+      event.target.value = "";
+    });
+
+    document.querySelectorAll("[data-faz]").forEach((button) => {
+      button.addEventListener("click", () => setDuplex(button.dataset.faz === "doble"));
+    });
+
+    $("#colorMode").addEventListener("change", (event) => {
+      state.colorMode = event.target.value;
+      // Si se eligió detectar y los PDFs se leyeron sin detección, hay que volver a analizarlos.
+      if (state.colorMode === "auto" && state.pdfFiles.length && !state.analyzedColor) {
+        showToast("Volvé a cargar el PDF para detectar el color");
+        return;
+      }
+      applyPdfSheets();
+    });
+
+    $("#pdfResult").addEventListener("click", (event) => {
+      if (event.target.closest("[data-action='remove-pdf']")) {
+        state.pdfFiles = [];
+        ["A4", "A3"].forEach((size) => ["bw", "color"].forEach((type) => { $(`#qty-${size}-${type}`).value = ""; }));
+        renderPdfResult();
+        render();
+      }
+      const add = event.target.closest("[data-action='add-suggested-binding']");
+      if (add) {
+        state.bindings.push({ id: state.nextBindingId++, type: add.dataset.bindingType, quantity: Number(add.dataset.bindingQty) || 1 });
+        renderBindings();
+        renderPdfResult();
+        render();
+      }
+    });
 
     // ---------- Eventos ----------
     const form = $("#budgetForm");
@@ -1438,6 +1783,7 @@
         const id = Number(event.target.closest("[data-binding-id]").dataset.bindingId);
         state.bindings = state.bindings.filter((binding) => binding.id !== id);
         renderBindings();
+        renderPdfResult();
         render();
       }
 
