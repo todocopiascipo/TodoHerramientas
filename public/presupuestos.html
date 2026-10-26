@@ -1102,6 +1102,10 @@
         grid-template-columns: 1fr;
       }
     }
+
+    .preview-actions {
+      padding-top: 16px;
+    }
   </style>
   <script src="/apps/suite-embed.js"></script>
   <link rel="stylesheet" href="/apps/suite-theme.css">
@@ -1186,10 +1190,6 @@
           </div>
         </div>
 
-        <div class="actions">
-          <button class="btn btn-primary" type="button" data-action="copy">Copiar mensaje</button>
-          <button class="btn btn-ghost" type="button" data-action="clear">Limpiar</button>
-        </div>
       </form>
 
       <aside class="panel preview-panel" aria-label="Vista previa del mensaje">
@@ -1199,6 +1199,10 @@
         </div>
         <div class="whatsapp-area">
           <pre class="message-bubble empty-message" id="preview"></pre>
+        </div>
+        <div class="actions preview-actions">
+          <button class="btn btn-primary" type="button" data-action="copy">Copiar mensaje</button>
+          <button class="btn btn-ghost" type="button" data-action="clear">Limpiar</button>
         </div>
       </aside>
     </div>
@@ -1869,7 +1873,8 @@
       render();
     });
 
-    form.addEventListener("click", async (event) => {
+    // Los botones de copiar y limpiar están junto a la vista previa, fuera del formulario.
+    document.querySelector(".layout").addEventListener("click", async (event) => {
       const lockButton = event.target.closest("[data-lock]");
       if (lockButton) {
         const row = lockButton.closest(".print-row");
