@@ -318,7 +318,7 @@
 
     .binding-row {
       display: grid;
-      grid-template-columns: minmax(150px, 1.3fr) minmax(86px, 0.6fr) minmax(92px, 0.7fr) minmax(100px, 0.8fr) 42px;
+      grid-template-columns: minmax(190px, 1.8fr) minmax(70px, 0.5fr) minmax(86px, 0.7fr) minmax(86px, 0.7fr) 42px;
       gap: 10px;
       align-items: end;
       padding: 12px;
@@ -928,7 +928,7 @@
             <div class="module-head">
               <div>
                 <h3 class="module-title">Anillados</h3>
-                <p class="module-hint">Agregá una línea por cada tamaño o cantidad distinta.</p>
+                <p class="module-hint">Agregá una línea por cada tamaño o cantidad distinta. Cada medida indica cuántas hojas entran como máximo.</p>
               </div>
               <button class="btn btn-add" type="button" data-action="add-binding">Agregar anillado</button>
             </div>
@@ -1007,12 +1007,12 @@
     };
 
     const BINDING_OPTIONS = [
-      { id: "7-9mm", label: "7-9mm", price: 2000 },
-      { id: "12-14mm", label: "12-14mm", price: 3000 },
-      { id: "17-20mm", label: "17-20mm", price: 4000 },
-      { id: "23-25mm", label: "23-25mm", price: 5000 },
-      { id: "29-33mm", label: "29-33mm", price: 6000 },
-      { id: "40-45-50mm", label: "40-45-50mm", price: 7000 }
+      { id: "7-9mm", label: "7-9mm", maxSheets: 50, price: 2000 },
+      { id: "12-14mm", label: "12-14mm", maxSheets: 85, price: 3000 },
+      { id: "17-20mm", label: "17-20mm", maxSheets: 120, price: 4000 },
+      { id: "23-25mm", label: "23-25mm", maxSheets: 160, price: 5000 },
+      { id: "29-33mm", label: "29-33mm", maxSheets: 250, price: 6000 },
+      { id: "40-45-50mm", label: "40-45-50mm", maxSheets: 540, price: 7000 }
     ];
 
     const LOCK_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
@@ -1057,11 +1057,6 @@
 
     function escapeHtml(text) {
       return String(text).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
-    }
-
-    function greetingLine() {
-      const hour = new Date().getHours();
-      return hour < 13 ? "Buenos días!" : hour < 20 ? "Buenas tardes!" : "Buenas noches!";
     }
 
     // ---------- Filas de impresión con candado ----------
@@ -1154,7 +1149,7 @@
       const grid = $("[data-binding-prices]");
       grid.innerHTML = BINDING_OPTIONS.map((option) => `
         <div class="field">
-          <label for="bindingPrice${option.id}">${option.label}</label>
+          <label for="bindingPrice${option.id}">${option.label} <small>(hasta ${option.maxSheets} hojas)</small></label>
           <input id="bindingPrice${option.id}" data-binding-price="${option.id}" type="number" min="0" step="1" inputmode="numeric" value="${option.price}">
         </div>
       `).join("");
@@ -1187,7 +1182,7 @@
       list.innerHTML = state.bindings.map((binding) => {
         const option = getBindingOption(binding.type);
         const optionsMarkup = BINDING_OPTIONS.map((item) =>
-          `<option value="${item.id}" ${item.id === binding.type ? "selected" : ""}>${item.label}</option>`).join("");
+          `<option value="${item.id}" ${item.id === binding.type ? "selected" : ""}>${item.label} · hasta ${item.maxSheets} hojas</option>`).join("");
         return `
           <div class="binding-row" data-binding-id="${binding.id}">
             <div class="field">
@@ -1255,7 +1250,7 @@
         return { message: EMPTY_MESSAGE, total, isEmpty: true };
       }
 
-      const text = [greetingLine(), ""];
+      const text = [];
       lines.filter((line) => line.quantity > 0).forEach((line) => {
         text.push(`${line.quantity} ${line.type.unit} ${line.size} ${line.type.label} (${formatMoney(line.price)} c/u): ${formatMoney(line.total)}`);
       });
