@@ -80,4 +80,12 @@ public/apps/todoautos
 
 Las carpetas originales usadas como fuente no fueron modificadas.
 
+### Código fuente de TodoPedidos
+
+El código de TodoPedidos (React + TypeScript) está en `apps-src/todopedidos`. Para cambiarlo, editar ahí y recompilar; el resultado se escribe en `public/apps/todopedidos`:
+
+```powershell
+npm run build:todopedidos
+```
+
 Cada app integrada carga `public/apps/suite-theme.css` (colores y fuente comunes) y `public/apps/suite-embed.js`, que oculta su encabezado propio cuando se abre dentro de la suite. El registro de herramientas del menú y del Inicio está en `src/shell/tools.js`.
