@@ -1144,7 +1144,7 @@
           <section class="size-section" aria-labelledby="sizeA4Title">
             <div class="size-head">
               <h3 class="module-title" id="sizeA4Title">Impresiones A4</h3>
-              <p class="module-hint">Cantidad de hojas (con un PDF se completa sola). Los precios se guardan; desbloqueá el candado para cambiarlos.</p>
+              <p class="module-hint">Cantidad de impresiones: cada faz impresa cuenta una (con un PDF se completa sola). Los precios se guardan; desbloqueá el candado para cambiarlos.</p>
             </div>
             <div class="print-table" data-size-rows="A4"></div>
           </section>
@@ -1229,10 +1229,10 @@
 
     // Tipos de impresión por tamaño. Las claves A4 son las que ya se usaban, así se conservan los precios guardados.
     const PRINT_TYPES = [
-      { id: "bw", label: "B/N", unit: "hojas" },
-      { id: "color", label: "Color", unit: "hojas" },
-      { id: "chambril", label: "Chambril / Ilustración", unit: "hojas" },
-      { id: "adhesive", label: "Adhesivo", unit: "hojas" }
+      { id: "bw", label: "B/N", unit: "impresiones" },
+      { id: "color", label: "Color", unit: "impresiones" },
+      { id: "chambril", label: "Chambril / Ilustración", unit: "impresiones" },
+      { id: "adhesive", label: "Adhesivo", unit: "impresiones" }
     ];
 
     const SIZES = {
@@ -1492,7 +1492,7 @@
       const text = [];
       lines.filter((line) => line.quantity > 0).forEach((line) => {
         const faz = state.duplexKeys.has(`${line.size}-${line.type.id}`) ? " doble faz" : "";
-        const unit = line.quantity === 1 ? "hoja" : "hojas";
+        const unit = line.quantity === 1 ? "impresión" : "impresiones";
         text.push(`${line.quantity} ${unit} ${line.size} ${line.type.label}${faz} (${formatMoney(line.price)} c/u): ${formatMoney(line.total)}`);
       });
       getGroupedBindings().forEach((binding) => {
@@ -1631,7 +1631,8 @@
     }
 
     // ---------- Presupuesto desde PDF ----------
-    // Cada PDF cargado es un "trabajo": se elige cómo imprimirlo y sus hojas se suman a esa línea.
+    // Cada PDF cargado es un "trabajo": se elige cómo imprimirlo y sus impresiones se suman a esa línea.
+    // Se cobra cada faz impresa: la doble faz no reduce lo cobrado, sólo las hojas (que definen el anillado).
     const Pdf = window.PresupuestoPdf;
     const TARGETS = Object.keys(SIZES).flatMap((size) => PRINT_TYPES.map((type) => ({ value: `${size}-${type.id}`, label: `${size} ${type.label}` })));
 
@@ -1648,7 +1649,7 @@
 
     function jobSheets(job) {
       const { count, error } = jobPages(job);
-      return { pages: count, sheets: error ? 0 : Pdf.sheetsFor(count, job.duplex), error };
+      return { pages: count, prints: error ? 0 : count, sheets: error ? 0 : Pdf.sheetsFor(count, job.duplex), error };
     }
 
     function renderPdfJobs() {
@@ -1689,15 +1690,15 @@
       `).join("");
     }
 
-    // Recalcula las hojas de cada PDF y las vuelca en las cantidades de la línea elegida.
+    // Recalcula las impresiones de cada PDF y las vuelca en las cantidades de la línea elegida.
     function applyPdfJobs() {
       state.pdfApplied.forEach((key) => { const input = $(`#qty-${key}`); if (input) input.value = ""; });
       const totals = {};
       const duplexKeys = new Set();
       state.pdfFiles.forEach((job) => {
         const result = jobSheets(job);
-        totals[job.target] = (totals[job.target] || 0) + result.sheets;
-        if (job.duplex && result.sheets > 0) duplexKeys.add(job.target);
+        totals[job.target] = (totals[job.target] || 0) + result.prints;
+        if (job.duplex && result.prints > 0) duplexKeys.add(job.target);
 
         const card = document.querySelector(`[data-job-id="${job.id}"]`);
         if (!card) return;
@@ -1706,7 +1707,7 @@
         line.classList.toggle("is-error", Boolean(result.error));
         line.textContent = result.error
           ? "Corregí las páginas para calcular"
-          : `${result.pages} ${result.pages === 1 ? "página" : "páginas"} → ${result.sheets} ${result.sheets === 1 ? "hoja" : "hojas"} ${targetLabel(job.target)}${job.duplex ? " doble faz" : ""}${job.duplex && result.pages % 2 === 1 ? " (la última sale de un solo lado)" : ""}`;
+          : `${result.pages} ${result.pages === 1 ? "página" : "páginas"} → ${result.prints} ${result.prints === 1 ? "impresión" : "impresiones"} ${targetLabel(job.target)}${job.duplex ? ` doble faz, en ${result.sheets} ${result.sheets === 1 ? "hoja" : "hojas"}` : ""}${job.duplex && result.pages % 2 === 1 ? " (la última sale de un solo lado)" : ""}`;
       });
       Object.entries(totals).forEach(([key, value]) => {
         const input = $(`#qty-${key}`);
