@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Contorno de corte Silhouette</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="core.js" defer></script>
+    <script src="app.js" defer></script>
+    <script src="/apps/suite-embed.js"></script>
+    <link rel="stylesheet" href="/apps/suite-theme.css" />
+  </head>
+  <body>
+<header class="band wrap tool-header" style="padding-bottom:8px">
+  <h1>Línea de corte automática para Silhouette</h1>
+  <p>Subí tus imágenes, ajustá el desplazamiento y descargá <b>un solo PNG</b>: al abrirlo, Silhouette Studio dibuja sola la línea de corte, ya calzada con la imagen.</p>
+</header>
+
+<main class="band wrap main" style="padding-top:12px">
+  <section class="panel" aria-label="Ajustes">
+    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Elegir imágenes">
+      <strong>Soltá imágenes acá</strong>
+      <span>o hacé clic para elegir · JPG, PNG, WEBP · varias a la vez · también podés pegar con Ctrl+V</span>
+      <input type="file" id="file" accept="image/*" multiple hidden>
+    </div>
+
+    <div class="field">
+      <label for="count">Cantidad de figuras <output id="countO">automático</output></label>
+      <input type="number" id="count" min="1" max="200" step="1" placeholder="Automático" inputmode="numeric" disabled>
+      <small id="countHelp">Se guarda para cada imagen. Vacío = el programa las detecta solo.</small>
+    </div>
+    <div class="field">
+      <label for="width">Ancho de la imagen completa <output id="widthO"></output></label>
+      <input type="number" id="width" min="1" max="200" step="0.5" value="18">
+      <small>En cm. Es el ancho de toda la hoja de stickers impresa.</small>
+    </div>
+    <div class="field">
+      <label for="offset">Desplazamiento <output id="offsetO"></output></label>
+      <input type="range" id="offset" min="0.5" max="8" step="0.25" value="2">
+      <small>Distancia del borde blanco alrededor de cada sticker.</small>
+    </div>
+    <div class="field">
+      <label for="smooth">Suavizado <output id="smoothO"></output></label>
+      <input type="range" id="smooth" min="0" max="1" step="0.05" value="0.6">
+      <small>Más alto = línea más simple, con menos detalles para la cuchilla.</small>
+    </div>
+
+    <details>
+      <summary>Ajustes avanzados</summary>
+      <div class="field">
+        <label for="join">Unir adornos cercanos <output id="joinO"></output></label>
+        <input type="range" id="join" min="0" max="8" step="0.25" value="3">
+        <small>Corazones, estrellitas o "Zzz" a esta distancia se suman al sticker.</small>
+      </div>
+      <div class="field">
+        <label for="gap">Separación mínima entre cortes <output id="gapO"></output></label>
+        <input type="range" id="gap" min="0" max="4" step="0.25" value="1">
+        <small>Evita que dos líneas de corte se toquen cuando los stickers están juntos.</small>
+      </div>
+      <div class="field">
+        <label for="tol">Tolerancia del fondo <output id="tolO"></output></label>
+        <input type="range" id="tol" min="5" max="120" step="1" value="40">
+        <small>Subila si quedan restos de fondo grisáceo; bajala si se "come" partes blancas del dibujo.</small>
+      </div>
+      <div class="field">
+        <label for="mainFrac">Tamaño mínimo de sticker <output id="mainFracO"></output></label>
+        <input type="range" id="mainFrac" min="0.02" max="0.6" step="0.01" value="0.15">
+        <small>Relativo al sticker más grande. Lo más chico se trata como adorno.</small>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="units">Unidades DXF</label>
+          <select id="units"><option value="mm">Milímetros</option><option value="in">Pulgadas</option></select>
+        </div>
+        <div class="field">
+          <label for="minPiece">Pieza mín. (mm²)</label>
+          <input type="number" id="minPiece" min="0" max="500" step="1" value="6">
+        </div>
+      </div>
+      <label class="check"><input type="checkbox" id="removeBg" checked> Quitar el fondo (solo en "DXF + PNG por separado")</label>
+      <button class="ghost" id="reset" style="margin-top:14px;width:100%">Restablecer valores</button>
+    </details>
+  </section>
+
+  <section class="mat-box" aria-label="Vista previa">
+    <div class="mat" id="mat">
+      <div class="empty" id="empty"><b>Tu base de corte está vacía</b>Subí una imagen y vas a ver acá la línea de corte en magenta.</div>
+      <canvas id="view" hidden></canvas>
+      <div class="busy" id="busy">Calculando…</div>
+    </div>
+    <div class="legend"><span><i></i>línea de corte (vista previa)</span></div>
+    <div class="warn" id="warn"></div>
+    <div class="stats">
+      <div class="stat">Stickers<b id="sCount">–</b></div>
+      <div class="stat">Tamaño final<b id="sSize">–</b></div>
+      <div class="stat">Resolución<b id="sDpi">–</b></div>
+      <div class="actions">
+        <button class="ghost" id="dlAll" disabled>Todas (ZIP)</button>
+        <button class="primary" id="dlOne" disabled>Descargar PNG para Silhouette</button>
+      </div>
+    </div>
+    <div class="msg" id="msg" role="status"></div>
+    <button class="link" id="dlDxf" disabled>Avanzado: descargar DXF + PNG por separado (ZIP)</button>
+    <div class="queue" id="queue" aria-label="Imágenes cargadas"></div>
+  </section>
+</main>
+
+<section class="band wrap" style="padding-top:0">
+  <h2>Cómo cargarlo en Silhouette Studio</h2>
+  <ol class="steps">
+    <li>Abrí el PNG en Silhouette Studio (<b>Archivo › Abrir</b> o arrastrándolo a la página). Fuera de la línea de corte el PNG es transparente, así que Silhouette <b>traza la línea de corte sola</b> al abrirlo, pegada a la imagen. No hay nada que alinear.</li>
+    <li>Si no aparecen las líneas rojas de corte, activá una sola vez <b>Editar › Preferencias › Importar › PNG › Auto-trazado</b> y volvé a abrir el archivo.</li>
+    <li>Revisá el tamaño en <b>Transformar › Escala</b>: tiene que medir lo que indica "Tamaño final" en esta página (también va en el nombre del archivo). Si no coincide, escribí el ancho con el candado de proporción activado: imagen y cortes se escalan juntos, nunca se desalinean.</li>
+    <li>Activá las <b>marcas de registro</b>, imprimí y cortá.</li>
+  </ol>
+</section>
+  </body>
+</html>

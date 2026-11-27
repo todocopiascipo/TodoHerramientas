@@ -84,6 +84,17 @@ export const TOOLS = [
     description: 'Generá carteles A4 para vinilo con encabezado calado y exportá en SVG o PNG.',
     keywords: 'cartel vinilo auto venta svg png rotulo',
     src: '/apps/todoautos/index.html'
+  },
+  {
+    id: 'silhouette-corte',
+    path: '/silhouette-corte',
+    group: 'rotulacion',
+    icon: 'scissors',
+    title: 'Contorno Silhouette',
+    subtitle: 'Línea de corte con desplazamiento para stickers, lista para Silhouette Studio.',
+    description: 'Quitá el fondo, separá cada sticker y generá la línea de corte con desplazamiento en un PNG que Silhouette traza solo.',
+    keywords: 'sticker plotter silhouette cameo corte contorno offset desplazamiento dxf print and cut pegatina',
+    src: '/apps/silhouette-corte/index.html'
   }
 ];
 

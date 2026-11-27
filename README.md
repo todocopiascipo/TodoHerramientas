@@ -1,6 +1,6 @@
 # Todo Copias - Suite fusionada
 
-Web app local con ocho herramientas integradas:
+Web app local con nueve herramientas integradas:
 
 - Presupuestos: calculadora para fotocopias, impresiones, papeles especiales y anillados.
 - Talonarios: numerador PDF ORIGINAL/COPIA para plantillas limpias.
@@ -10,6 +10,7 @@ Web app local con ocho herramientas integradas:
 - Inversor B/N Impresion: herramienta para invertir blanco y negro antes de imprimir.
 - TodoPedidos: armado de pedidos para proveedores con Excel opcional, precios estimados y listas guardadas.
 - TodoAutos V 1.1: generador de carteles A4 para vinilo rotulado con exportacion SVG/PNG transparente. El PNG exporta A4 a 150 DPI con metadata fisica para reducir peso.
+- Contorno Silhouette: linea de corte con desplazamiento para hojas de stickers, lista para imprimir y cortar con Silhouette Studio.
 
 ## Requisitos
 
@@ -67,6 +68,21 @@ npm run build
 
 Las pruebas comprueban medidas, demasía, paginado, alineación doble faz, PDF A4, marcas solo en frente, preferencias de impresión y PDFs de entrada rotados.
 
+## Contorno Silhouette
+
+Abrir **Contorno Silhouette** desde Inicio o entrar a `/silhouette-corte`.
+
+1. Subir una o varias imágenes (JPG, PNG o WebP; también se pueden arrastrar o pegar con Ctrl+V).
+2. Indicar la **cantidad de figuras** de cada imagen, o dejarla vacía para que se detecten solas. Con una cantidad fija, las piezas más cercanas se agrupan hasta llegar a ese número (los adornos sueltos se unen a su figura con un puente).
+3. Ajustar el **ancho** de la hoja impresa (cm), el **desplazamiento** (mm) y el **suavizado** de la línea. En Ajustes avanzados: unir adornos, separación mínima entre cortes, tolerancia del fondo y unidades del DXF.
+4. Descargar el **PNG para Silhouette**.
+
+El PNG es transparente por fuera de la línea de corte y tiene el borde blanco del sticker incluido. Silhouette Studio (también la edición Basic) auto-traza el borde de los PNG transparentes al abrirlos, así que la línea de corte queda pegada a la imagen: no hay que alinear ni escalar dos archivos. Si no aparecen las líneas de corte, activar una vez *Editar › Preferencias › Importar › PNG › Auto-trazado*. El PNG se exporta a 300 DPI como mínimo, con la resolución guardada para entrar al tamaño real; el nombre del archivo incluye la medida en mm para verificarla.
+
+Opción avanzada: un ZIP con el corte en **DXF** (R12, mm o pulgadas), el PNG del mismo contorno exterior y un LEEME con las medidas, para alinearlos a mano con *Alinear › Centro + Medio*.
+
+Todo se procesa en el navegador; el cálculo pesado corre en un Web Worker (`public/apps/silhouette-corte/worker.js`) sobre el núcleo `core.js`.
+
 ## Apps fusionadas
 
 Las aplicaciones agregadas quedaron copiadas dentro de:
@@ -76,6 +92,7 @@ public/apps/autofigu
 public/apps/inversor-bn-impresion
 public/apps/todopedidos
 public/apps/todoautos
+public/apps/silhouette-corte
 ```
 
 Las carpetas originales usadas como fuente no fueron modificadas.
