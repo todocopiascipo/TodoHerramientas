@@ -9,6 +9,7 @@ const PATHS = {
   cards: <><rect x="3" y="6" width="14" height="9" rx="1.5" /><path d="M7 18h12.5a1.5 1.5 0 0 0 1.5-1.5V9" /><path d="M6 9.5h5" /></>,
   images: <><rect x="3" y="5" width="15" height="13" rx="2" /><circle cx="8" cy="10" r="1.5" /><path d="m3.5 16 4.5-4 4 3.5 2.5-2 3.5 3" /><path d="M21 8v11a2 2 0 0 1-2 2H7" /></>,
   contrast: <><circle cx="12" cy="12" r="8.5" /><path d="M12 3.5v17a8.5 8.5 0 0 0 0-17z" fill="currentColor" /></>,
+  scissors: <><circle cx="6.5" cy="7" r="2.5" /><circle cx="6.5" cy="17" r="2.5" /><path d="M8.6 8.4 20 17M8.6 15.6 20 7" /></>,
   car: <><path d="M4 15.5V12l2-5h12l2 5v3.5" /><path d="M3 12h18v4.5H3z" /><circle cx="7.5" cy="17.5" r="1.5" /><circle cx="16.5" cy="17.5" r="1.5" /></>,
   search: <><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.2-4.2" /></>,
   menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
