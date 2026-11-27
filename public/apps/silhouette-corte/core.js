@@ -279,14 +279,18 @@ var Core = (() => {
   function process(rgba, w, h, o) {
     const pxmm = 1 / o.mmPerPx;
     const off = o.offsetMm * pxmm, join = o.joinMm * pxmm, gap = o.gapMm * pxmm;
+    const prog = typeof o.progress === 'function' ? o.progress : () => {};
+    prog(0.02, 'Quitando el fondo');
     const bg = backgroundMask(rgba, w, h, o.tol);
     const N = w * h, fg = new Uint8Array(N);
     for (let i = 0; i < N; i++) fg[i] = bg[i] ? 0 : 1;
+    prog(0.1, 'Buscando figuras');
     const { lab, comps } = label(fg, w, h);
     if (!comps.length) return { contours: [], bg, count: 0 };
     const maxA = Math.max(...comps.map(c => c.area));
     const minA = o.minPieceMm2 * pxmm * pxmm;
     let members, bridgeOf = [];
+    prog(0.15, 'Agrupando adornos');
     if (o.count > 0) {
       // Cantidad indicada: se ignoran solo motitas (< 0,5 mm²) y se agrupa hasta llegar a N.
       const sig = comps.filter(c => c.area >= Math.max(3, 0.5 * pxmm * pxmm));
@@ -337,6 +341,7 @@ var Core = (() => {
     const best = new Float32Array(N).fill(INF), second = new Float32Array(N).fill(INF), owner = new Int32Array(N).fill(-1);
     const idToGroup = new Map(); members.forEach((ids, k) => ids.forEach(id => idToGroup.set(id, k)));
     members.forEach((ids, k) => {
+      prog(0.25 + 0.5 * k / members.length, `Separando stickers (${k + 1} de ${members.length})`);
       const m = new Uint8Array(N); for (let i = 0; i < N; i++) if (idToGroup.get(lab[i]) === k) m[i] = 1;
       for (const [pp, qq] of (bridgeOf[k] || [])) stampLine(m, w, h, pp, qq, Math.max(1.5, 1.2 * pxmm));
       let c = m;
@@ -360,6 +365,7 @@ var Core = (() => {
     const smoothR = Math.max(0, Math.round(off * o.smooth * 0.35));
     const pad = Math.ceil(off + smoothR * 3 + 3);
     for (let k = 0; k < members.length; k++) {
+      prog(0.75 + 0.25 * k / members.length, 'Trazando líneas de corte');
       let x0 = w, y0 = h, x1 = -1, y1 = -1;
       for (let i = 0; i < N; i++) if (owner[i] === k && best[i] === 0) { const x = i % w, y = (i / w) | 0; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
       if (x1 < 0) continue;
