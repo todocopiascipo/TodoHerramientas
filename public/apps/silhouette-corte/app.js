@@ -42,14 +42,16 @@ const CoreMain = window.Core;
 let jobSeq = 0; const pending = new Map();
 if (worker) {
   worker.onmessage = e => {
-    const p = pending.get(e.data.id); if (!p) return; pending.delete(e.data.id);
+    const p = pending.get(e.data.id); if (!p) return;
+    if (e.data.progress !== undefined && !e.data.contours) { if (p.onProgress) p.onProgress(e.data.progress, e.data.label); return; }
+    pending.delete(e.data.id);
     if (e.data.error) p.reject(new Error(e.data.error)); else p.resolve({ contours: e.data.contours, fbg: e.data.fbg });
   };
   worker.onerror = () => { worker = null; for (const [id, p] of pending) { pending.delete(id); p.reject(new Error('reintentá')); } };
 }
-function runCore(payload) {
+function runCore(payload, onProgress) {
   if (!worker) return new Promise((res, rej) => setTimeout(() => { try { const r = CoreMain.process(payload.work, payload.ww, payload.wh, payload.opts); res({ contours: r.contours, fbg: CoreMain.backgroundMask(payload.full, payload.fw, payload.fh, payload.opts.tol) }); } catch (err) { rej(err); } }, 30));
-  const id = ++jobSeq; return new Promise((resolve, reject) => { pending.set(id, { resolve, reject }); worker.postMessage({ id, ...payload }); });
+  const id = ++jobSeq; return new Promise((resolve, reject) => { pending.set(id, { resolve, reject, onProgress }); worker.postMessage({ id, ...payload }); });
 }
 
 // ===================== Estado y ajustes =====================
@@ -68,6 +70,53 @@ function readUI() {
 }
 syncUI();
 
+// ===================== Progreso =====================
+const PROC_BTNS = [...document.querySelectorAll('.proc-btn')];
+let running = false;
+function setProgress(state, frac, label) {
+  const pct = Math.max(0, Math.min(100, Math.round(frac * 100)));
+  $('prog').dataset.state = state;
+  $('progBar').style.width = pct + '%';
+  $('progTrack').setAttribute('aria-valuenow', pct);
+  $('progLabel').textContent = label;
+  $('progPct').textContent = state === 'busy' || state === 'done' ? pct + '%' : '';
+}
+const fresh = it => !!(it && it.result && it.key === optsKey(it));
+// Refleja el estado de la imagen activa: botones, barra y marquitas de la cola.
+function refreshState() {
+  const it = items[active];
+  PROC_BTNS.forEach(b => { b.disabled = !it || running; b.textContent = running ? 'Procesando…' : 'Procesar'; });
+  const ok = fresh(it) && !!it.result.box && !running;
+  $('dlOne').disabled = !ok; $('dlDxf').disabled = !ok;
+  $('dlAll').disabled = items.length < 2 || running;
+  [...$('queue').children].forEach((b, i) => { b.dataset.state = fresh(items[i]) ? 'done' : (items[i] && items[i].result ? 'stale' : ''); });
+  if (running) return;
+  if (!it) setProgress('idle', 0, 'Subí una imagen para empezar');
+  else if (fresh(it)) { const n = it.result.polys.length; setProgress('done', 1, `Terminado · ${n} ${n === 1 ? 'figura' : 'figuras'}${it.secs ? ' en ' + it.secs.toFixed(1).replace('.', ',') + ' s' : ''}`); }
+  else if (it.result) setProgress('stale', 1, 'Cambiaste ajustes: tocá Procesar para actualizar');
+  else setProgress('ready', 0, 'Listo para procesar: tocá Procesar');
+}
+async function processItem(it) {
+  running = true; refreshState();
+  const t0 = performance.now();
+  try {
+    await compute(it, (p, label) => setProgress('busy', p, label));
+    it.secs = (performance.now() - t0) / 1000;
+    running = false;
+    if (it === items[active]) draw(it);
+  } catch (e) {
+    running = false; refreshState();
+    setProgress('error', 1, 'Error al procesar: ' + e.message);
+    return;
+  }
+  refreshState();
+}
+PROC_BTNS.forEach(b => b.addEventListener('click', () => {
+  const it = items[active]; if (!it || running) return;
+  processItem(it);
+  if (b.classList.contains('panel-proc')) $('prog').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}));
+
 // ===================== Carga de imágenes =====================
 function addFiles(list) {
   const files = [...list].filter(f => f.type.startsWith('image/'));
@@ -76,7 +125,7 @@ function addFiles(list) {
     const url = URL.createObjectURL(f), img = new Image();
     img.onload = () => {
       const it = { count: 0, name: f.name.replace(/\.[^.]+$/, '').replace(/[^\w\-áéíóúñÁÉÍÓÚÑ ]+/g, '_') || 'sticker', img, url, result: null, key: '' };
-      items.push(it); renderQueue(); if (active < 0 || files.length === 1) select(items.length - 1);
+      items.push(it); renderQueue(); if (active < 0 || files.length === 1) select(items.length - 1); else refreshState();
     };
     img.onerror = () => { $('msg').textContent = 'No se pudo leer ' + f.name + '.'; };
     img.src = url;
@@ -95,16 +144,31 @@ function renderQueue() {
   const q = $('queue'); q.innerHTML = '';
   items.forEach((it, i) => { const b = document.createElement('button'); b.setAttribute('aria-current', i === active); b.title = it.name;
     const im = document.createElement('img'); im.src = it.url; im.alt = it.name; b.appendChild(im); b.onclick = () => select(i); q.appendChild(b); });
-  $('dlAll').disabled = items.length < 2;
+  refreshState();
 }
-function select(i) { active = i; renderQueue(); const ci = $('count'); ci.disabled = false; ci.value = items[i].count || ''; $('countO').textContent = items[i].count ? items[i].count : 'automático'; compute(items[i]).then(draw).catch(err => { $('msg').textContent = 'Error: ' + err.message; $('busy').classList.remove('on'); }); }
+function select(i) {
+  active = i; renderQueue();
+  const it = items[i], ci = $('count'); ci.disabled = false; ci.value = it.count || ''; $('countO').textContent = it.count ? it.count : 'automático';
+  if (it.result) draw(it); else drawRaw(it);
+  refreshState();
+}
+// Vista previa de la imagen sin procesar.
+function drawRaw(it) {
+  const v = $('view'), W = it.img.naturalWidth, H = it.img.naturalHeight, sc = Math.min(1, 1600 / Math.max(W, H));
+  $('empty').hidden = true; v.hidden = false;
+  v.width = Math.round(W * sc); v.height = Math.round(H * sc);
+  v.getContext('2d').drawImage(it.img, 0, 0, v.width, v.height);
+  ['sCount', 'sSize', 'sDpi'].forEach(id => { $(id).textContent = '–'; });
+  $('warn').classList.remove('on'); $('msg').textContent = '';
+}
 
 // ===================== Cálculo =====================
 const WORK_MAX = 1400;
 function optsKey(it) { return JSON.stringify([it.count, S.width, S.offset, S.smooth, S.join, S.gap, S.tol, S.mainFrac, S.minPiece]); }
-async function compute(it) {
+async function compute(it, onProgress = () => {}) {
   const key = optsKey(it); if (it.result && it.key === key) return it;
-  $('busy').classList.add('on');
+  onProgress(0.01, 'Leyendo la imagen');
+  await new Promise(r => setTimeout(r, 20)); // deja pintar la barra
   const W = it.img.naturalWidth, H = it.img.naturalHeight;
   const mmPerPxFull = S.width * 10 / W;
   const s = Math.min(1, WORK_MAX / Math.max(W, H));
@@ -117,15 +181,15 @@ async function compute(it) {
   const fc = document.createElement('canvas'); fc.width = W; fc.height = H; const fg = fc.getContext('2d', { willReadFrequently: true }); fg.drawImage(it.img, 0, 0);
   const full = fg.getImageData(0, 0, W, H).data;
   const opts = { mmPerPx: mmPerPxWork, offsetMm: S.offset, joinMm: S.join, gapMm: S.gap, tol: S.tol, smooth: S.smooth, minPieceMm2: S.minPiece, mainFrac: S.mainFrac, count: it.count || 0 };
-  const r = await runCore({ work, ww, wh, full, fw: W, fh: H, opts });
-  if (optsKey(it) !== key) { return compute(it); }
+  const r = await runCore({ work, ww, wh, full, fw: W, fh: H, opts }, (p, label) => onProgress(0.05 + p * 0.9, label));
+  onProgress(0.97, 'Preparando la vista previa');
   // contornos a píxeles de la imagen original
   const k = Math.round(W * s) / W;
   const polys = r.contours.map(p => p.map(([x, y]) => [(x - margin) / k, (y - margin) / k]));
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const p of polys) for (const [x, y] of p) { if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; }
   it.result = { polys, fbg: r.fbg, W, H, mmPerPx: mmPerPxFull, box: polys.length ? { x0: Math.floor(x0), y0: Math.floor(y0), x1: Math.ceil(x1), y1: Math.ceil(y1) } : null };
-  it.key = key; $('busy').classList.remove('on');
+  it.key = key; onProgress(1, 'Listo');
   return it;
 }
 
@@ -164,15 +228,19 @@ function buildSilCanvas(it, f) {
   g.restore();
   return c;
 }
-async function silPngFor(it) {
-  await compute(it);
+async function silPngFor(it, onProgress = () => {}) {
+  await compute(it, (p, l) => onProgress(p * 0.6, l));
   const R = it.result, b = R.box; if (!b) return null;
   const nat = 25.4 / R.mmPerPx, dpi = exportDpi(R), f = dpi / nat;
+  onProgress(0.65, 'Dibujando el PNG a ' + Math.round(dpi) + ' dpi');
+  await new Promise(r => setTimeout(r, 20));
   const c = buildSilCanvas(it, f);
+  onProgress(0.8, 'Comprimiendo el PNG');
   const real = c.width / ((b.x1 - b.x0) * R.mmPerPx / 25.4); // dpi exacto según píxeles redondeados
   const blob = await new Promise(r => c.toBlob(r, 'image/png'));
   const wmm = (b.x1 - b.x0) * R.mmPerPx, hmm = (b.y1 - b.y0) * R.mmPerPx;
   const name = `${it.name}_${Math.round(wmm)}x${Math.round(hmm)}mm.png`;
+  onProgress(1, 'PNG listo');
   return { name, data: pngWithDpi(new Uint8Array(await blob.arrayBuffer()), real) };
 }
 
@@ -180,7 +248,7 @@ function draw(it) {
   if (it !== items[active]) return;
   const R = it.result, v = $('view');
   $('empty').hidden = true; v.hidden = false;
-  if (!R.box) { $('sCount').textContent = '0'; $('msg').textContent = 'No encontré stickers: probá subir la tolerancia del fondo.'; $('dlOne').disabled = true; $('dlDxf').disabled = true; return; }
+  if (!R.box) { $('sCount').textContent = '0'; $('msg').textContent = 'No encontré stickers: probá subir la tolerancia del fondo.'; refreshState(); return; }
   const b = R.box, maxSide = 1600, sc = Math.min(1.5, maxSide / Math.max(b.x1 - b.x0, b.y1 - b.y0));
   const base = buildSilCanvas(it, sc);
   v.width = base.width; v.height = base.height;
@@ -195,9 +263,9 @@ function draw(it) {
   $('sDpi').textContent = Math.round(dpi) + ' dpi';
   const w = $('warn');
   if (dpi < 150) { w.textContent = 'Resolución baja para ' + S.width + ' cm de ancho (' + Math.round(dpi) + ' dpi): la impresión puede verse pixelada. Usá una imagen más grande o un ancho menor.'; w.classList.add('on'); } else w.classList.remove('on');
-  $('dlOne').disabled = false; $('dlDxf').disabled = false;
   const n = R.polys.length;
-  $('msg').textContent = it.count && n !== it.count ? 'Pediste ' + it.count + ' figuras y salieron ' + n + ' cortes: probá ajustar "Unir adornos cercanos" o la tolerancia.' : (!it.count ? 'Detecté ' + n + ' figuras. Si no es correcto, escribí la cantidad real arriba.' : '');
+  $('msg').textContent = it.count && n !== it.count ? 'Pediste ' + it.count + ' figuras y salieron ' + n + ' cortes: probá ajustar "Unir adornos cercanos" o la tolerancia.' : (!it.count ? 'Detecté ' + n + ' figuras. Si no es correcto, escribí la cantidad real arriba y volvé a procesar.' : '');
+  refreshState();
 }
 
 // ===================== Exportar =====================
@@ -221,36 +289,43 @@ function saveBlob(name, blob) {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000); $('msg').textContent = 'Descargado: ' + name;
 }
-$('dlOne').onclick = async () => {
-  const it = items[active]; if (!it) return; $('dlOne').disabled = true; $('msg').textContent = 'Preparando PNG…';
-  try { const f = await silPngFor(it); if (f) await saveBlob(f.name, new Blob([f.data], { type: 'image/png' })); } catch (e) { $('msg').textContent = 'Error: ' + e.message; }
-  $('dlOne').disabled = false;
-};
-$('dlDxf').onclick = async () => {
-  const it = items[active]; if (!it) return; $('dlDxf').disabled = true; $('msg').textContent = 'Preparando ZIP…';
-  try { await saveBlob(it.name + '_dxf_png.zip', makeZip(await filesFor(it))); } catch (e) { $('msg').textContent = 'Error: ' + e.message; }
-  $('dlDxf').disabled = false;
-};
-$('dlAll').onclick = async () => {
-  $('dlAll').disabled = true; const all = [];
-  try {
-    for (let i = 0; i < items.length; i++) { $('msg').textContent = 'Procesando ' + (i + 1) + ' de ' + items.length + '…'; const f = await silPngFor(items[i]); if (f) all.push(f); }
-    $('busy').classList.remove('on'); await saveBlob('stickers_silhouette.zip', makeZip(all));
-  } catch (e) { $('msg').textContent = 'Error: ' + e.message; }
-  $('dlAll').disabled = items.length < 2;
-};
+async function withBar(fn) {
+  running = true; refreshState();
+  try { await fn((p, label) => setProgress('busy', p, label)); running = false; refreshState(); }
+  catch (e) { running = false; refreshState(); setProgress('error', 1, 'Error: ' + e.message); }
+}
+$('dlOne').onclick = () => withBar(async bar => {
+  const it = items[active]; if (!fresh(it)) return;
+  const f = await silPngFor(it, bar); if (f) await saveBlob(f.name, new Blob([f.data], { type: 'image/png' }));
+});
+$('dlDxf').onclick = () => withBar(async bar => {
+  const it = items[active]; if (!fresh(it)) return;
+  bar(0.5, 'Armando DXF + PNG');
+  await saveBlob(it.name + '_dxf_png.zip', makeZip(await filesFor(it)));
+});
+$('dlAll').onclick = () => withBar(async bar => {
+  const all = [], n = items.length;
+  for (let i = 0; i < n; i++) {
+    const t0 = performance.now(), wasFresh = fresh(items[i]);
+    const f = await silPngFor(items[i], (p, l) => bar((i + p) / n, `Imagen ${i + 1} de ${n} · ${l}`));
+    if (!wasFresh) items[i].secs = (performance.now() - t0) / 1000;
+    if (f) all.push(f);
+    if (items[i] === items[active]) draw(items[i]);
+  }
+  bar(1, 'Armando el ZIP');
+  await saveBlob('stickers_silhouette.zip', makeZip(all));
+});
 
 // ===================== Eventos de ajustes =====================
-let tmr = 0;
 $('count').addEventListener('input', () => {
   const it = items[active]; if (!it) return;
   const v = parseInt($('count').value, 10); it.count = v > 0 ? Math.min(200, v) : 0;
   $('countO').textContent = it.count ? it.count : 'automático';
-  clearTimeout(tmr); tmr = setTimeout(() => compute(it).then(draw).catch(err => { $('msg').textContent = 'Error: ' + err.message; }), 350);
+  refreshState();
 });
 document.querySelectorAll('.panel input:not([type=file]):not(#count), .panel select').forEach(el => el.addEventListener('input', () => {
-  readUI(); clearTimeout(tmr);
-  tmr = setTimeout(() => { const it = items[active]; if (it) compute(it).then(draw).catch(err => { $('msg').textContent = 'Error: ' + err.message; }); }, 350);
+  readUI(); refreshState();
 }));
-$('reset').onclick = () => { S = { ...DEF }; syncUI(); readUI(); const it = items[active]; if (it) compute(it).then(draw); };
+$('reset').onclick = () => { S = { ...DEF }; syncUI(); readUI(); refreshState(); };
+refreshState();
 }

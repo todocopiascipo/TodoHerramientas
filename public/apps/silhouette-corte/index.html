@@ -80,13 +80,20 @@
       <label class="check"><input type="checkbox" id="removeBg" checked> Quitar el fondo (solo en "DXF + PNG por separado")</label>
       <button class="ghost" id="reset" style="margin-top:14px;width:100%">Restablecer valores</button>
     </details>
+    <button class="primary proc-btn panel-proc" disabled>Procesar</button>
   </section>
 
   <section class="mat-box" aria-label="Vista previa">
     <div class="mat" id="mat">
-      <div class="empty" id="empty"><b>Tu base de corte está vacía</b>Subí una imagen y vas a ver acá la línea de corte en magenta.</div>
+      <div class="empty" id="empty"><b>Tu base de corte está vacía</b>Subí una imagen, tocá <b style="display:inline;font-size:inherit">Procesar</b> y vas a ver acá la línea de corte en magenta.</div>
       <canvas id="view" hidden></canvas>
-      <div class="busy" id="busy">Calculando…</div>
+    </div>
+    <div class="procbox">
+      <button class="primary proc-btn" id="process" disabled>Procesar</button>
+      <div class="progress" id="prog" data-state="idle">
+        <div class="prog-top"><span id="progLabel">Subí una imagen para empezar</span><span id="progPct"></span></div>
+        <div class="prog-track" id="progTrack" role="progressbar" aria-label="Progreso" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="prog-bar" id="progBar"></div></div>
+      </div>
     </div>
     <div class="legend"><span><i></i>línea de corte (vista previa)</span></div>
     <div class="warn" id="warn"></div>
@@ -96,7 +103,7 @@
       <div class="stat">Resolución<b id="sDpi">–</b></div>
       <div class="actions">
         <button class="ghost" id="dlAll" disabled>Todas (ZIP)</button>
-        <button class="primary" id="dlOne" disabled>Descargar PNG para Silhouette</button>
+        <button class="success" id="dlOne" disabled>Descargar PNG para Silhouette</button>
       </div>
     </div>
     <div class="msg" id="msg" role="status"></div>

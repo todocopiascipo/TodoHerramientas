@@ -39,8 +39,29 @@ background-size:100px 100px,100px 100px,20px 20px,20px 20px;border:1px solid var
 .mat canvas{max-width:100%;max-height:900px;display:block;filter:drop-shadow(0 1px 3px rgba(0,0,0,.25))}
 .empty{color:var(--mute);text-align:center;max-width:36ch}
 .empty b{display:block;font-size:20px;color:var(--ink);margin-bottom:4px}
-.busy{position:absolute;top:12px;right:12px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:14px;font-weight:700;display:none}
-.busy.on{display:block}
+/* Procesar + barra de progreso */
+.procbox{display:flex;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.proc-btn{min-width:150px;font-size:17px;min-height:48px}
+.panel-proc{width:100%;margin-top:18px}
+.progress{flex:1;display:flex;flex-direction:column;gap:6px}
+.prog-top{display:flex;justify-content:space-between;gap:10px;font-size:14px;font-weight:700}
+.prog-top #progPct{color:var(--mute);white-space:nowrap;font-variant-numeric:tabular-nums}
+.prog-track{height:12px;border-radius:999px;background:var(--mat);overflow:hidden}
+.prog-bar{height:100%;width:0;border-radius:999px;background:var(--acc);transition:width .25s ease}
+.progress[data-state=busy] .prog-bar{background-image:linear-gradient(45deg,rgba(255,255,255,.28) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.28) 50%,rgba(255,255,255,.28) 75%,transparent 75%);background-size:22px 22px;animation:stripes .8s linear infinite}
+.progress[data-state=done] .prog-bar{background:#16a34a}
+.progress[data-state=done] #progLabel{color:#15803d}
+.progress[data-state=stale] .prog-bar{background:#f59e0b}
+.progress[data-state=stale] #progLabel{color:#b45309}
+.progress[data-state=error] .prog-bar{background:#dc2626;width:100%!important}
+.progress[data-state=error] #progLabel{color:#b91c1c}
+.progress[data-state=idle] #progLabel,.progress[data-state=ready] #progLabel{color:var(--mute)}
+@keyframes stripes{to{background-position:22px 0}}
+@media(max-width:600px){.procbox{flex-direction:column;align-items:stretch}.proc-btn{width:100%}}
+.success{background:#16a34a;color:#fff}.success:hover:not(:disabled){background:#15803d}
+.queue button{position:relative}
+.queue button[data-state=done]::after{content:"";position:absolute;right:5px;bottom:5px;width:14px;height:14px;border-radius:50%;background:#16a34a;box-shadow:0 0 0 2px #fff}
+.queue button[data-state=stale]::after{content:"";position:absolute;right:5px;bottom:5px;width:14px;height:14px;border-radius:50%;background:#f59e0b;box-shadow:0 0 0 2px #fff}
 .stats{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center}
 .stat{font-size:14px;color:var(--mute)}.stat b{display:block;font-size:20px;color:var(--ink);white-space:nowrap}
 .actions{display:flex;flex-wrap:wrap;gap:10px;margin-left:auto}
@@ -55,7 +76,7 @@ kbd{font:600 13px inherit;border:1px solid var(--line);border-bottom-width:2px;b
 .link{background:none;color:var(--acc);text-decoration:underline;padding:0;min-height:36px;font-weight:600;align-self:flex-start}
 .msg{font-size:14px;color:var(--mute);min-height:1.4em}
 .legend{display:flex;gap:14px;font-size:13px;color:var(--mute)}.legend i{display:inline-block;width:22px;border-top:2px dashed var(--cut);vertical-align:middle;margin-right:6px}
-@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
 /* Dentro de la suite: la suite ya muestra título y descripción */
 html.in-suite .tool-header{display:none}

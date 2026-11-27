@@ -75,7 +75,8 @@ Abrir **Contorno Silhouette** desde Inicio o entrar a `/silhouette-corte`.
 1. Subir una o varias imágenes (JPG, PNG o WebP; también se pueden arrastrar o pegar con Ctrl+V).
 2. Indicar la **cantidad de figuras** de cada imagen, o dejarla vacía para que se detecten solas. Con una cantidad fija, las piezas más cercanas se agrupan hasta llegar a ese número (los adornos sueltos se unen a su figura con un puente).
 3. Ajustar el **ancho** de la hoja impresa (cm), el **desplazamiento** (mm) y el **suavizado** de la línea. En Ajustes avanzados: unir adornos, separación mínima entre cortes, tolerancia del fondo y unidades del DXF.
-4. Descargar el **PNG para Silhouette**.
+4. Tocar **Procesar**. La barra de progreso muestra cada paso (fondo, separación de stickers, líneas de corte) y queda en verde al terminar. Si después se cambia algún ajuste, la barra pasa a naranja y hay que volver a procesar antes de descargar.
+5. Descargar el **PNG para Silhouette**.
 
 El PNG es transparente por fuera de la línea de corte y tiene el borde blanco del sticker incluido. Silhouette Studio (también la edición Basic) auto-traza el borde de los PNG transparentes al abrirlos, así que la línea de corte queda pegada a la imagen: no hay que alinear ni escalar dos archivos. Si no aparecen las líneas de corte, activar una vez *Editar › Preferencias › Importar › PNG › Auto-trazado*. El PNG se exporta a 300 DPI como mínimo, con la resolución guardada para entrar al tamaño real; el nombre del archivo incluye la medida en mm para verificarla.
 
